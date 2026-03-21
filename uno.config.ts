@@ -5,9 +5,8 @@ export default defineConfig({
 		colors: {
 			background: 'var(--background)',
 			foreground: 'var(--foreground)',
-			main: 'var(--main)',
 			card: 'var(--card)',
-			// 'card-foreground': 'rgb(var(--card-foreground))',
+			'card-fg': 'var(--card-foreground)',
 		},
 		animation: {
 			keyframes: {
