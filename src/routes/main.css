@@ -1,0 +1,41 @@
+:root {
+	/**The main page background (usually white or near-black). **/
+	--background: #000;
+	/**The default text color on the main background.**/
+	--foreground: white;
+	/**Background for cards, sections, or containers.**/
+	--card: #1b1b1b;
+	/**Text color specifically for card content.**/
+	--card-foreground: #c2c2c2;
+	--main: red;
+	/**Background for floating elements (tooltips, dropdowns, Bits UI Select).**/
+	/* --popover: ; */
+	/**Text/icon color inside popovers.**/
+	/* --popover-foreground: ; */
+}
+
+body {
+	margin: 0;
+	background-color: var(--background);
+	color: var(--foreground);
+}
+
+@keyframes accordion-down {
+	from {
+		height: 0;
+	}
+
+	to {
+		height: var(--bits-accordion-content-height);
+	}
+}
+
+@keyframes accordion-up {
+	from {
+		height: var(--bits-accordion-content-height);
+	}
+
+	to {
+		height: 0;
+	}
+}
