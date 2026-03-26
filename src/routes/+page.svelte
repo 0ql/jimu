@@ -1,28 +1,39 @@
 <script lang="ts">
-	import { Tabs } from "bits-ui";
-	let text = "test";
+	import { onMount } from "svelte";
+	import { type DB, type Exercise, loadDB } from "./db";
+	import type { IDBPDatabase } from "idb";
+
+	let searchString: string = $state("");
+	let exercises: Exercise[] = $state([]);
+	let db: IDBPDatabase<DB>;
+
+	onMount(async () => {
+		db = await loadDB();
+		exercises = await db.getAll("exercises");
+	});
+
+	const save = (exercise: Exercise) => {
+		db.put("exercises", { ...exercise });
+	};
 </script>
 
 <main class="p-4">
-	<Tabs.Root value="outbound" class="">
-		<Tabs.List class="flex bg-card rounded gap-3 p-2">
-			<Tabs.Trigger
-				value="outbound"
-				class="data-[state=active]:bg-card-fg data-[state=active]:text-card text-card-fg bg-card w-full p-3 text-xl rounded-lg border-none"
-				>Outbound</Tabs.Trigger
-			>
-			<Tabs.Trigger
-				value="inbound"
-				class="data-[state=active]:bg-card-fg data-[state=active]:text-card text-card-fg bg-card w-full p-3 text-xl rounded-lg border-none"
-				>Inbound</Tabs.Trigger
-			>
-		</Tabs.List>
-		<Tabs.Content class="p-2 max-h-[80vh] overflow-y-scroll" value="outbound">
+	<nav class="fixed left-0 bottom-0 w-full">
+		<input
+			placeholder="Search..."
+			class="w-full px-8 py-4 text-xl"
+			bind:value={searchString}
+		/>
+	</nav>
+	{#each exercises as exercise}
+		{#if exercise.title.includes(searchString)}
+			<h2 class="text-base font-bold">{exercise.title}</h2>
 			<textarea
-				class="w-full bg-transparent border-none text-current"
-				bind:value={text}
-			/>
-		</Tabs.Content>
-		<Tabs.Content value="inbound"></Tabs.Content>
-	</Tabs.Root>
+				spellcheck="false"
+				class="w-full bg-transparent text-foreground border-none outline-none"
+				onchange={() => save(exercise)}
+				bind:value={exercise.workoutsString}
+			></textarea>
+		{/if}
+	{/each}
 </main>
