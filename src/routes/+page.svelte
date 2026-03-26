@@ -2,6 +2,7 @@
 	import { onMount } from "svelte";
 	import { type DB, type Exercise, loadDB } from "./db";
 	import type { IDBPDatabase } from "idb";
+	import Gear from "phosphor-svelte/lib/Gear";
 
 	let searchString: string = $state("");
 	let exercises: Exercise[] = $state([]);
@@ -18,6 +19,11 @@
 </script>
 
 <main class="p-4">
+	<nav class="fixed right-6 top-6">
+		<a href="/settings" class="bg-transparent border-none cursor-pointer">
+			<Gear class="size-8 dark:text-white" />
+		</a>
+	</nav>
 	<nav class="fixed left-0 bottom-0 w-full">
 		<input
 			placeholder="Search..."

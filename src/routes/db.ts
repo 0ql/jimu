@@ -13,11 +13,11 @@ export interface DB extends DBSchema {
 	};
 }
 
-export let db: IDBPDatabase<DB>;
+export let idb: IDBPDatabase<DB>;
 
 export const loadDB = async () => {
-	if (db) return db
-	db = await openDB<DB>("main", 1, {
+	if (idb) return idb
+	idb = await openDB<DB>("main", 1, {
 		upgrade(db, oldVersion, newVersion, transaction, event) {
 			db.createObjectStore("exercises", {
 				keyPath: "id",
@@ -25,5 +25,5 @@ export const loadDB = async () => {
 			});
 		},
 	});
-	return db
+	return idb
 }
