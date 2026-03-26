@@ -15,6 +15,34 @@
       "when": 1774550125119,
       "tag": "0001_peaceful_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774554150349,
+      "tag": "0002_chilly_joshua_kane",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1774555309008,
+      "tag": "0003_bumpy_ultimates",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1774555481913,
+      "tag": "0004_premium_famine",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1774557001261,
+      "tag": "0005_mixed_electro",
+      "breakpoints": true
     }
   ]
 }

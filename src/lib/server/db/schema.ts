@@ -8,16 +8,12 @@ export const users = sqliteTable('users', {
 
 export const exercises = sqliteTable('exercises', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
-	uuid: text('uuid').notNull().references(() => users.uuid),
-	title: text('title').notNull(),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' })
-		.notNull()
-		.$defaultFn(() => new Date()),
+	uuid: text('uuid').notNull().unique().references(() => users.uuid),
+	hash: text('hash').notNull(),
 	lastModified: integer('last_modified', { mode: 'timestamp_ms' })
-		.notNull()
 		.$defaultFn(() => new Date())
 		.$onUpdate(() => new Date()),
-	workoutsString: text('workouts_string').notNull(),
+	workoutsJsn: text('workouts_string').notNull(),
 });
 
 export const exerciseUpdateLog = sqliteTable('exercises_update_log', {

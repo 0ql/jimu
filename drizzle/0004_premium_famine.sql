@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `exercises_uuid_unique` ON `exercises` (`uuid`);

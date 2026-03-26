@@ -1,0 +1,1 @@
+ALTER TABLE `exercises` ADD `hash` text NOT NULL;
