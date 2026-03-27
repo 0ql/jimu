@@ -42,7 +42,7 @@
 		const hash = await createHash(JSON.stringify(exercises));
 		const meta = await db.getAll("meta");
 		if (data.hash !== hash) {
-			if ((data.lastModified ?? new Date(0)) > new Date(meta[0].lastChanged)) {
+			if ((data.lastModified ?? new Date(0)) > new Date(meta[0]?.lastChanged)) {
 				console.log("server version is newer");
 				const res = await fetch("/");
 				const jsn = await res.json();

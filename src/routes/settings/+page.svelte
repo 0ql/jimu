@@ -26,25 +26,43 @@
 			});
 		});
 	};
+
+	const logout = async () => {
+		const res = await fetch("/settings", {
+			method: "POST",
+		});
+		if (!res.ok) {
+			return alert("Failed to log out");
+		}
+	};
 </script>
 
 <main class="px-4">
-	<h1 class="font-semibold text-xl">Settings</h1>
-	<h2 class="font-semibold text-lg">Import</h2>
+	<h1 class="font-bold text-xl">Settings</h1>
+
+	<h2 class="font-semibold text-lg mb-2">Import Exercise String</h2>
+	<span class="text-fg-alt">Import the Workout String in the jimu Syntax</span>
 	<textarea
-		class="w-full bg-bg rounded-lg border-solid border-2 border-border-input"
+		class="mt-2 w-full bg-bg rounded-lg border-solid border-2 border-border-input"
 		bind:value={settings.import}
 	></textarea>
-
 	<Button.Root
 		onclick={importData}
 		class="w-full mt-3 bg-dark text-bg rounded-lg p-1.5 text-lg font-semibold border-none"
 		>Save</Button.Root
 	>
 
+	<h2 class="mt-6 font-semibold text-lg">Account</h2>
+	<Button.Root
+		onclick={logout}
+		class="w-full bg-dark text-bg rounded-lg p-1.5 text-lg font-semibold border-none"
+		>Logout</Button.Root
+	>
+
+	<h2 class="mt-6 font-semibold text-lg">Modify Database</h2>
 	<AlertDialog.Root>
 		<AlertDialog.Trigger
-			class="w-full mt-3 bg-destructive text-bg rounded-lg p-1.5 text-lg font-semibold border-none"
+			class="w-full bg-destructive text-bg rounded-lg p-1.5 text-lg font-semibold border-none"
 			>Delete all Exercises</AlertDialog.Trigger
 		>
 		<AlertDialog.Portal>
