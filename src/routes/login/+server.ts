@@ -2,7 +2,7 @@ import { db } from "$lib/server/db";
 import { users } from "$lib/server/db/schema";
 import type { RequestHandler } from "./$types";
 import { eq } from "drizzle-orm";
-import argon2 from "argon2"
+import argon2 from "@node-rs/argon2"
 import { createSession, deleteSession, SESSION_DURATION_MS } from "$lib/server/session";
 
 export const POST: RequestHandler = async ({ request, cookies, locals }) => {
