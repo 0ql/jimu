@@ -33,16 +33,16 @@ export const loadDB = async () => {
 	idb = await openDB<DB>("main", 2, {
 		async upgrade(db, oldVersion, newVersion, transaction, event) {
 			if (!db.objectStoreNames.contains('exercises')) {
-				await updateMeta()
+				console.log("Creating Exercises store")
 				db.createObjectStore("exercises", {
 					keyPath: "id",
 					autoIncrement: true,
 				});
 			}
 			if (!db.objectStoreNames.contains('meta')) {
+				console.log("Creating Meta store")
 				db.createObjectStore("meta", {
 					keyPath: "id",
-					// autoIncrement: true,
 				})
 			}
 		},
