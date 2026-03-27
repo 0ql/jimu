@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import { clearExersises, loadDB, type DB } from "../idb";
 	import { AlertDialog, Button } from "bits-ui";
+	import { goto } from "$app/navigation";
 
 	let db: IDBPDatabase<DB>;
 
@@ -34,6 +35,7 @@
 		if (!res.ok) {
 			return alert("Failed to log out");
 		}
+		goto("/login");
 	};
 </script>
 
@@ -77,7 +79,9 @@
 						Confirm deletion of Database
 					</AlertDialog.Title>
 					<AlertDialog.Description class="text-fg-alt text-sm">
-						This action cannot be undone.
+						This action cannot be undone. By continueing you are deleting the
+						local database of exercises. Only by pressing the sync button
+						afterwords will the server version be overriden.
 					</AlertDialog.Description>
 				</div>
 				<div class="flex w-full items-center justify-center gap-2">

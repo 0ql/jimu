@@ -3,13 +3,17 @@
 	import { type DB, type Exercise, loadDB, saveExercise, synced } from "./idb";
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
-	import { Button } from "bits-ui";
 
 	let searchString: string = $state("");
 	let exercises: Exercise[] = $state([]);
 	let db: IDBPDatabase<DB>;
 
 	let { data }: PageProps = $props();
+
+	const loadExercises = async () => {
+		db = await loadDB();
+		exercises = await db.getAll("exercises");
+	};
 
 	const createHash = async (json: string): Promise<string> => {
 		const encoded = new TextEncoder().encode(json);
@@ -18,83 +22,63 @@
 		return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 	};
 
-	const sync = async () => {
-		const res = await fetch("/", {
-			method: "POST",
-			body: JSON.stringify(exercises),
+	const syncFromServer = async () => {
+		const res = await fetch("/");
+		const jsn = await res.json();
+		console.log(jsn);
+		await db.clear("exercises");
+		jsn.forEach(async (exercise: Exercise) => {
+			await db.add("exercises", {
+				title: exercise.title,
+				workoutsString: exercise.workoutsString,
+			});
 		});
-
-		if (res.status !== 200) {
-			alert("something went wrong syncing");
-			return;
-		}
+		await db.put("meta", {
+			id: 1,
+			lastChanged: Date.now(),
+		});
 		synced.set(true);
+		loadExercises();
 	};
 
 	onMount(async () => {
-		db = await loadDB();
-		exercises = await db.getAll("exercises");
-		// if (exercises.length === 0 && data.hash)
+		await loadExercises();
+		if (exercises.length === 0 && !data.hash) {
+			console.log("No Exercises stored locally and none on server");
+			return;
+		}
 		if (exercises.length === 0) {
-			console.log("No Exercises found trying to sync from server")
-			console.log(data)
+			console.log(
+				"No Exercises found locally. But Server has Exercises. Syncing from server...",
+			);
+			return syncFromServer();
 		}
 		const hash = await createHash(JSON.stringify(exercises));
 		const meta = await db.getAll("meta");
 		if (data.hash !== hash) {
 			if ((data.lastModified ?? new Date(0)) > new Date(meta[0]?.lastChanged)) {
-				console.log("server version is newer");
-				const res = await fetch("/");
-				const jsn = await res.json();
-				console.log(jsn);
-				await db.clear("exercises");
-				jsn.forEach(async (exercise: Exercise) => {
-					await db.add("exercises", {
-						title: exercise.title,
-						workoutsString: exercise.workoutsString,
-					});
-				});
-				await db.put("meta", {
-					id: 1,
-					lastChanged: Date.now(),
-				});
+				console.log("Server version is newer. Syncing from server...");
+				return syncFromServer();
 			}
+			console.log("Local version is up to date.");
 		}
 	});
 </script>
 
 <main class="p-4">
-	<nav class="fixed right-6 top-6 flex gap-2">
-		<Button.Root
-			onclick={sync}
-			class="cursor-pointer border-solid border-2 border-border-input bg-bg-alt rounded-lg size-10"
-		>
-			{#if $synced}
-				<i class="i-tabler-cloud-check block size-6"></i>
-			{:else}
-				<i class="i-tabler-cloud-x block size-6"></i>
-			{/if}
-		</Button.Root>
-		<Button.Root
-			href="/settings"
-			class="cursor-pointer border-solid border-2 border-border-input bg-bg-alt rounded-lg size-10 flex justify-center items-center"
-		>
-			<i class="i-tabler-settings block size-6"></i>
-		</Button.Root>
-	</nav>
 	<nav class="fixed left-2 bottom-2 right-2">
 		<input
 			placeholder="Search..."
-			class="w-full bg-bg rounded-lg border-solid border-2 border-border-input px-8 py-4 text-xl"
+			class="w-full bg-bg rounded-lg border-solid border-2 border-border-input px-8 py-4 text-xl outline-none"
 			bind:value={searchString}
 		/>
 	</nav>
 	{#each exercises as exercise}
 		{#if exercise.title.includes(searchString)}
-			<h2 class="text-base font-bold">{exercise.title}</h2>
+			<h2 class="text-base font-bold my-1">{exercise.title}</h2>
 			<textarea
 				spellcheck="false"
-				class="w-full bg-transparent text-foreground border-none outline-none"
+				class="w-full bg-transparent text-foreground border-none outline-none text-1rem"
 				onchange={() => saveExercise(exercise)}
 				bind:value={exercise.workoutsString}
 			></textarea>
