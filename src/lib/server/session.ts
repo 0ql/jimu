@@ -17,7 +17,7 @@ export const createSession = async (userUuid: string) => {
 
 export const validateSession = async (sessionId: string) => {
 	const session = await db.select().from(sessions).where(eq(sessions.id, sessionId))
-	if (!session) return null
+	if (!session[0]) return null
 	if (session[0].expiresAt < new Date()) {
 		db.delete(sessions).where(eq(sessions.id, sessionId))
 		return null

@@ -2,10 +2,8 @@
 	import { onMount } from "svelte";
 	import { type DB, type Exercise, loadDB, saveExercise, synced } from "./idb";
 	import type { IDBPDatabase } from "idb";
-	import Gear from "phosphor-svelte/lib/Gear";
-	import Cloud from "phosphor-svelte/lib/Cloud";
-	import CloudSlash from "phosphor-svelte/lib/CloudSlash";
 	import type { PageProps } from "./$types";
+	import { Button } from "bits-ui";
 
 	let searchString: string = $state("");
 	let exercises: Exercise[] = $state([]);
@@ -44,8 +42,8 @@
 				const res = await fetch("/");
 				const jsn = await res.json();
 				console.log(jsn);
+				await db.clear("exercises");
 				jsn.forEach(async (exercise: Exercise) => {
-					await db.clear("exercises");
 					await db.add("exercises", {
 						title: exercise.title,
 						workoutsString: exercise.workoutsString,
@@ -61,17 +59,23 @@
 </script>
 
 <main class="p-4">
-	<nav class="fixed right-6 top-6">
-		<button onclick={sync} class="bg-transparent border-none cursor-pointer">
+	<nav class="fixed right-6 top-6 flex gap-2">
+		<Button.Root
+			onclick={sync}
+			class="cursor-pointer border-solid border-2 border-border-input bg-bg-alt rounded-lg size-10"
+		>
 			{#if $synced}
-				<Cloud class="size-8 dark:text-white" />
+				<i class="i-tabler-cloud-check block size-6"></i>
 			{:else}
-				<CloudSlash class="size-8 dark:text-white" />
+				<i class="i-tabler-cloud-x block size-6"></i>
 			{/if}
-		</button>
-		<a href="/settings" class="bg-transparent border-none cursor-pointer">
-			<Gear class="size-8 dark:text-white" />
-		</a>
+		</Button.Root>
+		<Button.Root
+			href="/settings"
+			class="cursor-pointer border-solid border-2 border-border-input bg-bg-alt rounded-lg size-10 flex justify-center items-center"
+		>
+			<i class="i-tabler-settings block size-6"></i>
+		</Button.Root>
 	</nav>
 	<nav class="fixed left-0 bottom-0 w-full">
 		<input

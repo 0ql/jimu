@@ -1,20 +1,68 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 :root {
-	/**The main page background (usually white or near-black). **/
-	--background: #000;
-	/**The default text color on the main background.**/
-	--foreground: white;
-	/**Background for cards, sections, or containers.**/
-	--card: #1b1b1b;
-	/**Text color specifically for card content.**/
-	--card-foreground: #c2c2c2;
-	--main: red;
-	/**Background for floating elements (tooltips, dropdowns, Bits UI Select).**/
-	/* --popover: ; */
-	/**Text/icon color inside popovers.**/
-	/* --popover-foreground: ; */
+	/* ── Basic ── */
+	/* --bg: #171717; */
+	/* --bg-black: #171717; */
+	/* --foreground: #FFFFFF; */
+	/* --foreground-alt: #FFFFFF; */
+	/* --muted: #27272A; */
+	/* --bg-black-10: rgba(245, 245, 245, 0.10); */
+
+	/* ── Radius ── */
+	/* --border-radius-card: 16px; */
+	/* --border-radius-card-big: 20px; */
+	/* --border-radius-small: 10px; */
+	/* --input-radius: 9px; */
+
+	/* ── TW Colors ── */
+	/* --blue: #E0F2FE; */
+	/* --violet: #1E1B4B; */
+	/* --pink: #FAE8FF; */
+	/* --red: #F43F5E; */
+	/* --navy: #1E40AF; */
+
+	/* ── Inputs ── */
+	/* --input-border-color: rgba(245, 245, 245, 0.17); */
+	/* --input-height: 48px; */
+	/* --input-height-small: 40px; */
+	/* --input-border-color-hover: rgba(244, 244, 244, 0.40); */
+
+	/* ── Other ── */
+	/* --muted-text-color: rgba(255, 255, 255, 0.40); */
+	/* --border-card-color: rgba(245, 245, 245, 0.10); */
+	/* --focus-color: #FFFFFF; */
+	/* --depth: rgba(255, 255, 255, 0.03); */
+
+	--background: #0d0d0d;
+	--background-alt: #141414;
+	--foreground: #f2f2f2;
+	--foreground-alt: #b3b3b3;
+	--muted: #27272a;
+	--muted-foreground: #fff6;
+	--border: #f5f5f5;
+	--border-input: #f5f5f52b;
+	--border-input-hover: #f5f5f566;
+	--border-card: #f5f5f51a;
+	--dark: #f5f5f5;
+	--dark-40: #f5f5f566;
+	--dark-10: #f5f5f51a;
+	--dark-04: #f5f5f50a;
+	--accent: #cfeafc;
+	--accent-foreground: #e1f3fe;
+	--destructive: #f43e5c;
+	--line: #171717;
+	--tertiary: #fdffa4;
+	--contrast: #fff;
+	--shadow-mini: 0px 1px 0px 1px #0000004d;
+	--shadow-mini-inset: 0px 1px 0px 0px #00000080 inset;
+	--shadow-popover: 0px 7px 12px 3px #0000004d;
+	--shadow-kbd: 0px 2px 0px 0px #ffffff12;
+	--shadow-btn: 0px 1px 0px 1px #0003;
+	--shadow-card: 0px 2px 0px 1px #0006;
+	--shadow-date-field-focus: 0px 0px 0px 3px #f4f4f51a;
 }
+
 
 * {
 	font-family: "Inter", sans-serif;
@@ -22,36 +70,15 @@
 	font-weight: 400;
 	font-style: normal;
 	box-sizing: border-box;
+	color: var(--foreground);
 }
 
 body {
 	margin: 0;
 	background-color: var(--background);
-	color: var(--foreground);
 }
 
 textarea {
 	field-sizing: content;
 	min-height: 3lh;
-	/* Sets minimum height to 3 lines */
-}
-
-@keyframes accordion-down {
-	from {
-		height: 0;
-	}
-
-	to {
-		height: var(--bits-accordion-content-height);
-	}
-}
-
-@keyframes accordion-up {
-	from {
-		height: var(--bits-accordion-content-height);
-	}
-
-	to {
-		height: 0;
-	}
 }

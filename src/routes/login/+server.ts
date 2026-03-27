@@ -4,13 +4,17 @@ import type { RequestHandler } from "./$types";
 import { eq } from "drizzle-orm";
 import argon2 from "argon2"
 import { createSession, deleteSession, SESSION_DURATION_MS } from "$lib/server/session";
+import { redirect } from "@sveltejs/kit";
 
 export const POST: RequestHandler = async ({ request, cookies, locals }) => {
-	if (locals.user.uuid) {
-		deleteSession(cookies.get('session') ?? "")
-	}
 	const jsn = await request.json()
 	const user = await db.select().from(users).where(eq(users.username, jsn.username))
+	if (!user[0]) {
+		return new Response("User not found", { status: 404 })
+	}
+	if (locals.user?.uuid) {
+		deleteSession(cookies.get('session') ?? "")
+	}
 	const valid = await argon2.verify(user[0].passwordHash, jsn.password)
 	if (!valid) {
 		return new Response('Bad Credentials', { status: 400 })
