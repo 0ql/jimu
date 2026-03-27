@@ -1,7 +1,7 @@
 import { db } from "$lib/server/db";
 import { users } from "$lib/server/db/schema";
 import { redirect } from "@sveltejs/kit";
-import { type RequestHandler } from "./$types";
+import type { RequestHandler } from "./$types";
 import argon2 from "argon2"
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -9,5 +9,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	// TODO: input validation
 	const pwdHash = await argon2.hash(jsn.password)
 	await db.insert(users).values({ username: jsn.username, passwordHash: pwdHash })
-	return redirect(303, '/')
+	return new Response()
 }

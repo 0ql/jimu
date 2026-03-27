@@ -34,6 +34,11 @@
 	onMount(async () => {
 		db = await loadDB();
 		exercises = await db.getAll("exercises");
+		// if (exercises.length === 0 && data.hash)
+		if (exercises.length === 0) {
+			console.log("No Exercises found trying to sync from server")
+			console.log(data)
+		}
 		const hash = await createHash(JSON.stringify(exercises));
 		const meta = await db.getAll("meta");
 		if (data.hash !== hash) {
@@ -77,10 +82,10 @@
 			<i class="i-tabler-settings block size-6"></i>
 		</Button.Root>
 	</nav>
-	<nav class="fixed left-0 bottom-0 w-full">
+	<nav class="fixed left-2 bottom-2 right-2">
 		<input
 			placeholder="Search..."
-			class="w-full px-8 py-4 text-xl"
+			class="w-full bg-bg rounded-lg border-solid border-2 border-border-input px-8 py-4 text-xl"
 			bind:value={searchString}
 		/>
 	</nav>

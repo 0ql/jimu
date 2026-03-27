@@ -4,7 +4,6 @@ import type { RequestHandler } from "./$types";
 import { eq } from "drizzle-orm";
 import argon2 from "argon2"
 import { createSession, deleteSession, SESSION_DURATION_MS } from "$lib/server/session";
-import { redirect } from "@sveltejs/kit";
 
 export const POST: RequestHandler = async ({ request, cookies, locals }) => {
 	const jsn = await request.json()
@@ -23,9 +22,9 @@ export const POST: RequestHandler = async ({ request, cookies, locals }) => {
 	cookies.set('session', session.id, {
 		path: '/',
 		httpOnly: true,   // not accessible via JS
-		secure: true,     // HTTPS only
+		secure: process.env.NODE_ENV === 'production',     // HTTPS only
 		sameSite: 'lax',  // CSRF protection
-		maxAge: SESSION_DURATION_MS,
+		maxAge: SESSION_DURATION_MS
 	});
 	console.log("Creating Session: ", session)
 	return new Response()
