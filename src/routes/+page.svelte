@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { type DB, type Exercise, loadDB, saveExercise } from "./idb";
+	import { type DB, type Exercise, loadDB, saveExercise, synced } from "./idb";
 	import type { IDBPDatabase } from "idb";
 	import Gear from "phosphor-svelte/lib/Gear";
 	import Cloud from "phosphor-svelte/lib/Cloud";
+	import CloudSlash from "phosphor-svelte/lib/CloudSlash";
 	import type { PageProps } from "./$types";
 
 	let searchString: string = $state("");
@@ -25,7 +26,11 @@
 			body: JSON.stringify(exercises),
 		});
 
-		if (res.status !== 200) alert("something went wrong syncing");
+		if (res.status !== 200) {
+			alert("something went wrong syncing");
+			return;
+		}
+		synced.set(true);
 	};
 
 	onMount(async () => {
@@ -58,7 +63,11 @@
 <main class="p-4">
 	<nav class="fixed right-6 top-6">
 		<button onclick={sync} class="bg-transparent border-none cursor-pointer">
-			<Cloud class="size-8 dark:text-white" />
+			{#if $synced}
+				<Cloud class="size-8 dark:text-white" />
+			{:else}
+				<CloudSlash class="size-8 dark:text-white" />
+			{/if}
 		</button>
 		<a href="/settings" class="bg-transparent border-none cursor-pointer">
 			<Gear class="size-8 dark:text-white" />

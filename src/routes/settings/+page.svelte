@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { IDBPDatabase } from "idb";
 	import { onMount } from "svelte";
-	import { loadDB, type DB } from "../idb";
+	import { clearExersises, loadDB, type DB } from "../idb";
 
 	let db: IDBPDatabase<DB>;
 
@@ -9,13 +9,9 @@
 		db = await loadDB();
 	});
 
-	const settings = {
+	const settings = $state({
 		import: "",
-	};
-
-	const clearObjectStore = () => {
-		db.clear("exercises");
-	};
+	});
 
 	const importData = () => {
 		const exerciseStings = settings.import.split(/\n{2,}/);
@@ -33,4 +29,5 @@
 
 <h1>Import</h1>
 <textarea class="w-full" bind:value={settings.import}></textarea>
-<!-- <button onclick={importData}>Save</button> -->
+<button onclick={importData}>Save</button>
+<button onclick={clearExersises}>Delete all Exercises</button>
