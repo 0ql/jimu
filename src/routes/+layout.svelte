@@ -21,6 +21,22 @@
 		}
 		synced.set(true);
 	};
+
+	let currentTime = $state("");
+	const updateTime = () => {
+		currentTime = new Date()
+			.toLocaleString("de-DE", {
+				day: "2-digit",
+				month: "2-digit",
+				year: "2-digit",
+				hour: "2-digit",
+				minute: "2-digit",
+			})
+			.replace(",", "");
+	};
+
+	updateTime();
+	setInterval(updateTime, 1000);
 </script>
 
 <svelte:head>
@@ -31,15 +47,7 @@
 	<section
 		class="border-solid border-2 border-border-input bg-bg-alt rounded-lg h-10 px-2 flex justify-center items-center"
 	>
-		{new Date()
-			.toLocaleString("de-DE", {
-				day: "2-digit",
-				month: "2-digit",
-				year: "2-digit",
-				hour: "2-digit",
-				minute: "2-digit",
-			})
-			.replace(",", "")}
+		{currentTime}
 	</section>
 	<Button.Root
 		href="/"

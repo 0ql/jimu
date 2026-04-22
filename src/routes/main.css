@@ -81,4 +81,5 @@ body {
 textarea {
 	field-sizing: content;
 	min-height: 3lh;
+	max-height: 10lh;
 }

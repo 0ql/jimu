@@ -3,6 +3,7 @@
 	import { type DB, type Exercise, loadDB, saveExercise, synced } from "./idb";
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
+	import { Button } from "bits-ui";
 
 	let searchString: string = $state("");
 	let exercises: Exercise[] = $state([]);
@@ -63,25 +64,47 @@
 			console.log("Local version is up to date.");
 		}
 	});
+
+	let focusedTextarea = $state(false);
+	const addTime = () => {};
 </script>
 
 <main class="p-4">
-	<nav class="fixed left-2 bottom-2 right-2">
+	<nav class="fixed left-2 bottom-2 right-2 flex gap-2">
 		<input
 			placeholder="Search..."
-			class="w-full bg-bg rounded-lg border-solid border-2 border-border-input px-8 py-4 text-xl outline-none"
+			class="w-full bg-bg rounded-lg border-solid border-2 border-border-input px-6 py-3 text-xl outline-none"
 			bind:value={searchString}
 		/>
-	</nav>
-	{#each exercises as exercise}
-		{#if exercise.title.includes(searchString)}
-			<h2 class="text-base font-bold my-1">{exercise.title}</h2>
-			<textarea
-				spellcheck="false"
-				class="w-full bg-transparent text-foreground border-none outline-none text-1rem"
-				onchange={() => saveExercise(exercise)}
-				bind:value={exercise.workoutsString}
-			></textarea>
+		{#if focusedTextarea}
+			<Button.Root
+				class="bg-transparent border-solid border-2 border-border-input rounded-lg"
+				onclick={addTime}
+			>
+				<i class="block i-tabler-clock-plus size-6 text-white w-10"></i>
+			</Button.Root>
 		{/if}
-	{/each}
+	</nav>
+	<section>
+		{#each exercises as exercise}
+			{#if exercise.title.includes(searchString.toLowerCase())}
+				<h2 class="text-base font-bold my-1">
+					<input
+						spellcheck="false"
+						bind:value={exercise.title}
+						onchange={() => saveExercise(exercise)}
+						class="w-full bg-transparent text-current border-none text-lg font-semibold outline-none"
+					/>
+				</h2>
+				<textarea
+					spellcheck="false"
+					class="w-full bg-transparent text-foreground border-none outline-none text-1rem"
+					onchange={() => saveExercise(exercise)}
+					bind:value={exercise.workoutsString}
+					onfocusin={() => (focusedTextarea = true)}
+					onfocusout={() => (focusedTextarea = false)}
+				></textarea>
+			{/if}
+		{/each}
+	</section>
 </main>
