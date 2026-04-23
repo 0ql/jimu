@@ -9,7 +9,6 @@ RUN pnpm install --frozen-lockfile --dangerously-allow-all-builds
 
 COPY . .
 
-# Create the data directory before build
 RUN mkdir -p /app/data
 
 ENV DATABASE_URL=${DATABASE_URL}
