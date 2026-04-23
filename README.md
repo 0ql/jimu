@@ -6,6 +6,5 @@
 
 # TODO
 
-- change title
 - define routines in settings
 - analytics

@@ -1,11 +1,17 @@
 services:
   jimu:
     build: .
+    container_name: jimu
     ports:
       - 3000:3000
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_URL=./sqlite.db
+      - DATABASE_URL=/app/data/sqlite.db
       - ORIGIN=http://localhost:3000
+    volumes:
+      - jimu-data:/app/data
     restart: unless-stopped
+
+volumes:
+  jimu-data:
