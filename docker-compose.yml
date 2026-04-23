@@ -1,6 +1,6 @@
 services:
   jimu:
-    build: .
+    image: ghcr.io/0ql/jimu:latest
     container_name: jimu
     ports:
       - 3000:3000
