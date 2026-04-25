@@ -2,6 +2,7 @@
 	"name": "jimu",
 	"version": "0.0.1",
 	"devDependencies": {
+		"@iconify-json/heroicons": "^1.2.3",
 		"@iconify-json/tabler": "^1.2.33",
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/adapter-node": "^5.5.4",

@@ -4,6 +4,7 @@
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
 	import { Button } from "bits-ui";
+	import Popup from "$lib/ui/Popup.svelte";
 
 	let searchString: string = $state("");
 	let exercises: Exercise[] = $state([]);
@@ -67,9 +68,42 @@
 
 	let focusedTextarea = $state(false);
 	const addTime = () => {};
+	let showPopup = $state(false);
 </script>
 
 <main class="p-4">
+	{#each exercises as exercise}
+		{#if exercise.title.includes(searchString.toLowerCase())}
+			<section class="bg-bg-alt rounded-lg p-3 px-4 mt-4">
+				<h2
+					class="text-base font-bold my-1 flex gap-2 items-center justify-between"
+				>
+					<input
+						spellcheck="false"
+						bind:value={exercise.title}
+						onchange={() => saveExercise(exercise)}
+						class="bg-transparent text-current border-none text-lg font-semibold outline-none"
+					/>
+					<button
+						onclick={() => (showPopup = !showPopup)}
+						class="i-heroicons-ellipsis-vertical-16-solid size-5 block"
+					></button>
+				</h2>
+				<details>
+					<summary class="py-4 cursor-pointer">Show...</summary>
+					<textarea
+						spellcheck="false"
+						class="w-full bg-transparent text-foreground border-none outline-none text-1rem"
+						onchange={() => saveExercise(exercise)}
+						bind:value={exercise.workoutsString}
+						onfocusin={() => (focusedTextarea = true)}
+						onfocusout={() => (focusedTextarea = false)}
+					></textarea>
+				</details>
+			</section>
+		{/if}
+	{/each}
+
 	<nav class="fixed left-2 bottom-2 right-2 flex gap-2">
 		<input
 			placeholder="Search..."
@@ -85,26 +119,6 @@
 			</Button.Root>
 		{/if}
 	</nav>
-	<section>
-		{#each exercises as exercise}
-			{#if exercise.title.includes(searchString.toLowerCase())}
-				<h2 class="text-base font-bold my-1">
-					<input
-						spellcheck="false"
-						bind:value={exercise.title}
-						onchange={() => saveExercise(exercise)}
-						class="w-full bg-transparent text-current border-none text-lg font-semibold outline-none"
-					/>
-				</h2>
-				<textarea
-					spellcheck="false"
-					class="w-full bg-transparent text-foreground border-none outline-none text-1rem"
-					onchange={() => saveExercise(exercise)}
-					bind:value={exercise.workoutsString}
-					onfocusin={() => (focusedTextarea = true)}
-					onfocusout={() => (focusedTextarea = false)}
-				></textarea>
-			{/if}
-		{/each}
-	</section>
+
+	<Popup title="Edit Exercise" bind:showPopup>test</Popup>
 </main>
