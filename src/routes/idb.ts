@@ -60,3 +60,9 @@ export const clearExersises = async () => {
 	synced.set(false)
 	await idb.clear("exercises")
 }
+
+export const updateExercise = async (exercise: Exercise) => {
+	synced.set(false)
+	if (!exercise.id) return
+	await idb.delete("exercises", exercise.id.toString())
+}

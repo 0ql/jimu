@@ -12,10 +12,10 @@
 	></button>
 	<section
 		transition:fly={{ y: 1200, duration: 200, opacity: 1 }}
-		class="fixed left-0 bottom-0 rounded-t-xl w-full h-60vh bg-[#171717] px-10 py-5 box-border"
+		class="fixed left-0 bottom-0 rounded-t-xl w-full h-60vh bg-[#171717] px-8 py-5 box-border"
 	>
 		<div class="flex justify-between items-center">
-			<h1>{title}</h1>
+			<h1 class="text-2xl">{title}</h1>
 			<button
 				class="block i-heroicons-x-mark-16-solid size-8"
 				onclick={() => (showPopup = false)}

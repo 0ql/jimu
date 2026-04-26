@@ -4,6 +4,7 @@
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
 	import { Button } from "bits-ui";
+	import Btn from "$lib/ui/Button.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
 
 	let searchString: string = $state("");
@@ -92,7 +93,10 @@
 					></button>
 				</h2>
 				<details>
-					<summary class="py-4 cursor-pointer">Show...</summary>
+					<summary
+						class="py-3 cursor-pointer text-sm font-semibold list-none color-fg-alt"
+						>Show...</summary
+					>
 					<textarea
 						spellcheck="false"
 						class="w-full bg-transparent text-foreground border-none outline-none text-1rem"
@@ -122,5 +126,7 @@
 		{/if}
 	</nav>
 
-	<Popup title="Edit Exercise" bind:showPopup>test</Popup>
+	<Popup title="Edit Exercise" bind:showPopup>
+		<Btn onclick={deleteExercise} cl="bg-destructive">Delete Exercise</Btn>
+	</Popup>
 </main>
