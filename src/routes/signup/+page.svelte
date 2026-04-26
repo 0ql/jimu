@@ -31,7 +31,7 @@
 	};
 </script>
 
-<main class="flex justify-center items-center w-full h-100dvh">
+<main class="flex justify-center items-center w-full">
 	<section
 		class="max-w-100 bg-bg-alt border-solid border-1 rounded-lg border-border-card px-4 pb-3"
 	>

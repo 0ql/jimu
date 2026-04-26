@@ -74,7 +74,9 @@
 <main class="p-4">
 	{#each exercises as exercise}
 		{#if exercise.title.includes(searchString.toLowerCase())}
-			<section class="bg-bg-alt rounded-lg p-3 px-4 mt-4">
+			<section
+				class="border-solid border-muted border-1 rounded-lg p-3 px-4 mt-4"
+			>
 				<h2
 					class="text-base font-bold my-1 flex gap-2 items-center justify-between"
 				>
