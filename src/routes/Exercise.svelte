@@ -15,7 +15,7 @@
 	// let exercise = $state(exercise);
 </script>
 
-<Card cl="mt-4">
+<Card>
 	<h2 class="text-base font-bold my-1 flex gap-2 items-center justify-between">
 		<input
 			spellcheck="false"

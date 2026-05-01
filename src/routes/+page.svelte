@@ -80,7 +80,7 @@
 </script>
 
 <main class="p-4">
-	<div class="mt-36">
+	<div class="mt-36 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 		{#each $exercises as exercise}
 			{#if exercise.title
 				.toLowerCase()

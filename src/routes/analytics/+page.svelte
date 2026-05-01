@@ -40,16 +40,18 @@
 				}
 				lastMonth = month;
 
-				const setRegex = /(\d+(?:\.\d+)?)\s*x\s*(\d+)/g;
+				const setRegex = /(?:(\d+(?:\.\d+)?)\s*)?x\s*(\d+)/g;
 
 				let match;
 				let totalVolume = 0;
 				let maxWeight = 0;
 				let totalReps = 0;
+				let lastWeight = 0;
 
 				while ((match = setRegex.exec(row)) !== null) {
-					const weight = parseFloat(match[1]);
+					const weight = match[1] !== undefined ? parseFloat(match[1]) : lastWeight;
 					const reps = parseInt(match[2]);
+					lastWeight = weight;
 
 					totalVolume += weight * reps;
 					totalReps += reps;
@@ -80,33 +82,73 @@
 	};
 
 	let yAxisField = $state("y");
+
+	const metricLabel = $derived(
+		yAxisField === "y"
+			? "Volume"
+			: yAxisField === "maxWeight"
+				? "Max Weight"
+				: "Total Reps",
+	);
+	const metricUnit = $derived(yAxisField === "totalReps" ? "" : " kg");
+
+	const stats = $derived.by(() => {
+		if (!points.length) return null;
+		const best = [...points].reduce((a: any, b: any) =>
+			b[yAxisField] > a[yAxisField] ? b : a,
+		);
+		const last = [...points].reduce((a: any, b: any) => (b.x > a.x ? b : a));
+		const avg = Math.round(
+			points.reduce((s: number, p: any) => s + p[yAxisField], 0) /
+				points.length,
+		);
+		const fmt = (d: Date) =>
+			d.toLocaleDateString("de-DE", {
+				day: "2-digit",
+				month: "short",
+				year: "2-digit",
+			});
+		return { total: points.length, best, last, avg, fmt };
+	});
 </script>
 
 <main class="p-4">
 	<div class="mt-36">
-		<Card label="Exercise">
-			<select
-				class="w-full bg-transparent outline-none text-base"
-				bind:value={selection}
-				onchange={showExercise}
-			>
-				{#each $exercises as exercise}
-					<option class="bg-bg" value={exercise.id}>{exercise.title}</option>
-				{/each}
-			</select>
-		</Card>
+		<div>
+			<p class="text-xs color-fg-alt mb-1">Exercise</p>
+			<div class="relative">
+				<select
+					class="w-full bg-bg rounded-lg border-solid border-1 border-border-input px-4 py-3 outline-none appearance-none cursor-pointer pr-10"
+					bind:value={selection}
+					onchange={showExercise}
+				>
+					{#each $exercises as exercise}
+						<option class="bg-bg" value={exercise.id}>{exercise.title}</option>
+					{/each}
+				</select>
+				<i
+					class="i-tabler-chevron-down absolute right-3 top-1/2 -translate-y-1/2 size-4 pointer-events-none color-fg-alt"
+				></i>
+			</div>
+		</div>
 
-		<Card label="Metric" cl="mt-4">
-			<select
-				class="w-full bg-transparent outline-none text-base"
-				bind:value={yAxisField}
-				onchange={showExercise}
-			>
-				<option class="bg-bg" value="y">Volume</option>
-				<option class="bg-bg" value="maxWeight">Max Weight</option>
-				<option class="bg-bg" value="totalReps">Total Reps</option>
-			</select>
-		</Card>
+		<div class="mt-4">
+			<p class="text-xs color-fg-alt mb-1">Metric</p>
+			<div class="relative">
+				<select
+					class="w-full bg-bg rounded-lg border-solid border-1 border-border-input px-4 py-3 outline-none appearance-none cursor-pointer pr-10"
+					bind:value={yAxisField}
+					onchange={showExercise}
+				>
+					<option class="bg-bg" value="y">Volume</option>
+					<option class="bg-bg" value="maxWeight">Max Weight</option>
+					<option class="bg-bg" value="totalReps">Total Reps</option>
+				</select>
+				<i
+					class="i-tabler-chevron-down absolute right-3 top-1/2 -translate-y-1/2 size-4 pointer-events-none color-fg-alt"
+				></i>
+			</div>
+		</div>
 
 		<Card cl="mt-4 h-64 p-8">
 			<LayerCake
@@ -114,7 +156,7 @@
 				y={yAxisField}
 				data={points}
 				xScale={scaleTime()}
-				padding={{ left: 40, bottom: 20 }}
+				padding={{ left: 30 }}
 			>
 				<Svg>
 					<Scatter fill={"white"} r={3} />
@@ -132,6 +174,26 @@
 				</Svg>
 			</LayerCake>
 		</Card>
+
+		{#if stats}
+			<div class="grid grid-cols-2 gap-3 mt-4">
+				<Card label="Sessions">
+					<p class="text-2xl font-semibold mt-1">{stats.total}</p>
+				</Card>
+				<Card label="Avg {metricLabel}">
+					<p class="text-2xl font-semibold mt-1">{stats.avg}{metricUnit}</p>
+				</Card>
+				<Card label="Best {metricLabel}">
+					<p class="text-2xl font-semibold mt-1">
+						{stats.best[yAxisField]}{metricUnit}
+					</p>
+					<p class="text-xs color-fg-alt mt-1">{stats.fmt(stats.best.x)}</p>
+				</Card>
+				<Card label="Last Session">
+					<p class="text-2xl font-semibold mt-1">{stats.fmt(stats.last.x)}</p>
+				</Card>
+			</div>
+		{/if}
 
 		{#if selectedExercise}
 			<Card cl="mt-4">
