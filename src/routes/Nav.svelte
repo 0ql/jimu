@@ -2,27 +2,12 @@
 	import "virtual:uno.css";
 	import "./main.css";
 	import { Button } from "bits-ui";
-	import { idb, synced } from "./idb";
+	import { synced, syncToServer } from "./idb";
 
 	let {
 		searchString = $bindable(""),
 		onadd = undefined,
 	}: { searchString?: string; onadd?: () => void } = $props();
-
-	const sync = async () => {
-		const exercises = await idb.getAll("exercises");
-
-		const res = await fetch("/", {
-			method: "POST",
-			body: JSON.stringify(exercises),
-		});
-
-		if (res.status !== 200) {
-			alert("something went wrong syncing");
-			return;
-		}
-		synced.set(true);
-	};
 
 	let currentTime = $state("");
 	const updateTime = () => {
@@ -61,7 +46,7 @@
 			<i class="i-tabler-device-analytics block size-6"></i>
 		</Button.Root>
 		<Button.Root
-			onclick={sync}
+			onclick={syncToServer}
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			{#if $synced}

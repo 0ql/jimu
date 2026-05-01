@@ -23,6 +23,21 @@ export interface DB extends DBSchema {
 
 export let idb: IDBPDatabase<DB>;
 export const synced = writable(true);
+
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+export const syncToServer = async () => {
+	if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+	const exercises = await idb.getAll("exercises");
+	const res = await fetch("/", { method: "POST", body: JSON.stringify(exercises) });
+	if (res.ok) synced.set(true);
+};
+
+const scheduleSync = () => {
+	if (syncTimer) clearTimeout(syncTimer);
+	syncTimer = setTimeout(syncToServer, 3000);
+};
+
 export const exercises: Writable<Exercise[]> = writable([]);
 
 const updateMeta = async () => {
@@ -61,26 +76,29 @@ export const addExercise = async (title: string) => {
 	await idb.add("exercises", { title, workoutsString: "" });
 	await updateMeta();
 	await loadExercises();
+	scheduleSync();
 };
 
 export const saveExercise = async (exercise: Exercise) => {
-	synced.set(false)
+	synced.set(false);
 	await idb.put("exercises", { ...exercise });
-	await updateMeta()
-}
+	await updateMeta();
+	scheduleSync();
+};
 
 export const clearExersises = async () => {
-	synced.set(false)
-	await idb.clear("exercises")
-}
+	synced.set(false);
+	await idb.clear("exercises");
+	scheduleSync();
+};
 
 export const deleteExercise = async (exercise: Exercise) => {
-	synced.set(false)
-	if (!exercise.id) return
-	console.log(exercise.id)
+	synced.set(false);
+	if (!exercise.id) return;
 	// @ts-ignore
-	await idb.delete("exercises", exercise.id)
-}
+	await idb.delete("exercises", exercise.id);
+	scheduleSync();
+};
 
 export const getAll = async (storeName: "meta" | "exercises") => {
 	return await idb.getAll(storeName)

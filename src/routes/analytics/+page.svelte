@@ -26,13 +26,18 @@
 		let lastMonth = 0;
 		return rawStrings
 			.map((row) => {
-				const dateMatch = row.match(/^(\d{1,2})\.(\d{1,2})/);
+				const dateMatch = row.match(/^(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})\.)?/);
 				if (!dateMatch) return null;
 
 				const day = parseInt(dateMatch[1]);
 				const month = parseInt(dateMatch[2]);
 
-				if (month < lastMonth) year++;
+				if (dateMatch[3] !== undefined) {
+					const rawYear = parseInt(dateMatch[3]);
+					year = rawYear < 100 ? 2000 + rawYear : rawYear;
+				} else if (month < lastMonth) {
+					year++;
+				}
 				lastMonth = month;
 
 				const setRegex = /(\d+(?:\.\d+)?)\s*x\s*(\d+)/g;
