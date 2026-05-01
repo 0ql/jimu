@@ -56,6 +56,13 @@ export const loadExercises = async () => {
 	exercises.set(await db.getAll("exercises"));
 };
 
+export const addExercise = async (title: string) => {
+	synced.set(false);
+	await idb.add("exercises", { title, workoutsString: "" });
+	await updateMeta();
+	await loadExercises();
+};
+
 export const saveExercise = async (exercise: Exercise) => {
 	synced.set(false)
 	await idb.put("exercises", { ...exercise });

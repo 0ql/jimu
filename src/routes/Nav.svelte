@@ -4,7 +4,10 @@
 	import { Button } from "bits-ui";
 	import { idb, synced } from "./idb";
 
-	let { searchString = $bindable("") } = $props();
+	let {
+		searchString = $bindable(""),
+		onadd = undefined,
+	}: { searchString?: string; onadd?: () => void } = $props();
 
 	const sync = async () => {
 		const exercises = await idb.getAll("exercises");
@@ -62,9 +65,9 @@
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			{#if $synced}
-				<i class="i-tabler-cloud-check block size-6"></i>
+				<i class="i-tabler-cloud-check bg-green-400 block size-6"></i>
 			{:else}
-				<i class="i-tabler-cloud-x block size-6"></i>
+				<i class="i-tabler-cloud-x bg-destructive block size-6"></i>
 			{/if}
 		</Button.Root>
 		<Button.Root
@@ -73,6 +76,14 @@
 		>
 			<i class="i-tabler-settings block size-6"></i>
 		</Button.Root>
+		{#if onadd}
+			<Button.Root
+				onclick={onadd}
+				class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center ml-auto"
+			>
+				<i class="i-tabler-plus block size-6"></i>
+			</Button.Root>
+		{/if}
 	</div>
 
 	<input

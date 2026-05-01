@@ -14,11 +14,15 @@
 
 	import ExerciseComponent from "./Exercise.svelte";
 	import Nav from "./Nav.svelte";
+	import Popup from "$lib/ui/Popup.svelte";
 	import { toast } from "$lib/toast.svelte";
+	import { addExercise } from "./idb";
 
 	let searchString: string = $state("");
 	let db: IDBPDatabase<DB>;
 	let { data }: PageProps = $props();
+	let showAddPopup = $state(false);
+	let newTitle = $state("");
 
 	const createHash = (json: string): string => {
 		let h = 0;
@@ -92,4 +96,19 @@
 	</div>
 </main>
 
-<Nav bind:searchString />
+<Popup title="New Exercise" bind:showPopup={showAddPopup}>
+	<input
+		placeholder="Exercise name"
+		class="w-full mt-4 bg-bg rounded-lg border-solid border-1 border-border-input px-4 py-3 text-xl outline-none"
+		bind:value={newTitle}
+		onkeydown={(e) => e.key === "Enter" && newTitle.trim() && (addExercise(newTitle.trim()), newTitle = "", showAddPopup = false)}
+	/>
+	<button
+		class="w-full mt-3 bg-dark text-bg rounded-lg p-1.5 text-lg font-semibold border-none cursor-pointer"
+		onclick={() => { if (!newTitle.trim()) return; addExercise(newTitle.trim()); newTitle = ""; showAddPopup = false; }}
+	>
+		Add
+	</button>
+</Popup>
+
+<Nav bind:searchString onadd={() => (showAddPopup = true)} />

@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { deleteExercise, type Exercise, saveExercise } from "./idb";
+	import {
+		deleteExercise,
+		type Exercise,
+		loadExercises,
+		saveExercise,
+	} from "./idb";
 
 	import Btn from "$lib/ui/Button.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
@@ -37,7 +42,10 @@
 	</details>
 	<Popup title="Edit Exercise" bind:showPopup>
 		<Btn
-			onclick={() => deleteExercise(exercise)}
+			onclick={() => {
+				deleteExercise(exercise);
+				loadExercises();
+			}}
 			cl="bg-destructive cursor-pointer">Delete Exercise</Btn
 		>
 	</Popup>
