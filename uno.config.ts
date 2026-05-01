@@ -16,7 +16,9 @@ export default defineConfig({
 			'border-input-hover': 'var(--border-input-hover)',
 			'border-card': 'var(--border-card)',
 			'dark': 'var(--dark)',
-			'destructive': 'var(--destructive)'
+			'destructive': 'var(--destructive)',
+			'accent': 'var(--accent)',
+			'tertiary': 'var(--tertiary)'
 		},
 	}
 })

@@ -5,17 +5,17 @@
 	import Popup from "$lib/ui/Popup.svelte";
 	import Card from "$lib/ui/Card.svelte";
 
-	let { exercise }: { exercise: Exercise } = $props();
+	let { exercise = $bindable() }: { exercise: Exercise } = $props();
 	let showPopup = $state(false);
-	let exerciseCopy = $state(exercise);
+	// let exercise = $state(exercise);
 </script>
 
 <Card cl="mt-4">
 	<h2 class="text-base font-bold my-1 flex gap-2 items-center justify-between">
 		<input
 			spellcheck="false"
-			bind:value={exerciseCopy.title}
-			onchange={() => saveExercise(exerciseCopy)}
+			bind:value={exercise.title}
+			onchange={() => saveExercise(exercise)}
 			class="bg-transparent w-full text-current border-none text-lg font-semibold outline-none"
 		/>
 		<button
@@ -31,13 +31,13 @@
 		<textarea
 			spellcheck="false"
 			class="w-full bg-transparent text-foreground border-none outline-none text-1rem"
-			onchange={() => saveExercise(exerciseCopy)}
-			bind:value={exerciseCopy.workoutsString}
+			onchange={() => saveExercise(exercise)}
+			bind:value={exercise.workoutsString}
 		></textarea>
 	</details>
 	<Popup title="Edit Exercise" bind:showPopup>
 		<Btn
-			onclick={() => deleteExercise(exerciseCopy)}
+			onclick={() => deleteExercise(exercise)}
 			cl="bg-destructive cursor-pointer">Delete Exercise</Btn
 		>
 	</Popup>

@@ -14,16 +14,18 @@
 
 	import ExerciseComponent from "./Exercise.svelte";
 	import Nav from "./Nav.svelte";
+	import { toast } from "$lib/toast.svelte";
 
 	let searchString: string = $state("");
 	let db: IDBPDatabase<DB>;
 	let { data }: PageProps = $props();
 
-	const createHash = async (json: string): Promise<string> => {
-		const encoded = new TextEncoder().encode(json);
-		const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
-		const hashArray = Array.from(new Uint8Array(hashBuffer));
-		return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+	const createHash = (json: string): string => {
+		let h = 0;
+		for (let i = 0; i < json.length; i++) {
+			h = (Math.imul(31, h) + json.charCodeAt(i)) | 0;
+		}
+		return (h >>> 0).toString(16);
 	};
 
 	const syncFromServer = async () => {
@@ -49,24 +51,26 @@
 		db = await loadDB();
 		await loadExercises();
 		if ($exercises.length === 0 && !data.hash) {
-			console.log("No Exercises stored locally and none on server");
+			toast.success("No Exercises stored locally and none on server");
 			return;
 		}
 		if ($exercises.length === 0) {
-			console.log(
+			toast.success(
 				"No Exercises found locally. But Server has Exercises. Syncing from server...",
 			);
-			return syncFromServer();
+			await syncFromServer();
+			return loadExercises();
 		}
-		const hash = await createHash(JSON.stringify(exercises));
+		const hash = createHash(JSON.stringify(exercises));
 		const meta = await getAll("meta");
 		if (data.hash !== hash) {
 			// @ts-ignore
 			if ((data.lastModified ?? new Date(0)) > new Date(meta[0]?.lastChanged)) {
-				console.log("Server version is newer. Syncing from server...");
-				return syncFromServer();
+				toast.success("Server version is newer. Syncing from server...");
+				await syncFromServer();
+				return loadExercises();
 			}
-			console.log("Local version is up to date.");
+			toast.success("Local version is up to date.");
 		}
 	});
 </script>
