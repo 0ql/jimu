@@ -63,7 +63,6 @@
 	--shadow-date-field-focus: 0px 0px 0px 3px #f4f4f51a;
 }
 
-
 * {
 	font-family: "Inter", sans-serif;
 	font-optical-sizing: auto;
@@ -71,6 +70,7 @@
 	font-style: normal;
 	box-sizing: border-box;
 	color: var(--foreground);
+	-webkit-tap-highlight-color: transparent;
 }
 
 body {

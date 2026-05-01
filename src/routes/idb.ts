@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import { writable } from "svelte/store";
+import { writable, type Writable } from "svelte/store";
 
 export type Exercise = {
 	id?: number;
@@ -23,6 +23,7 @@ export interface DB extends DBSchema {
 
 export let idb: IDBPDatabase<DB>;
 export const synced = writable(true);
+export const exercises: Writable<Exercise[]> = writable([]);
 
 const updateMeta = async () => {
 	await idb.put("meta", { id: 1, lastChanged: Date.now() })
@@ -50,6 +51,11 @@ export const loadDB = async () => {
 	return idb
 }
 
+export const loadExercises = async () => {
+	const db = await loadDB();
+	exercises.set(await db.getAll("exercises"));
+};
+
 export const saveExercise = async (exercise: Exercise) => {
 	synced.set(false)
 	await idb.put("exercises", { ...exercise });
@@ -65,5 +71,10 @@ export const deleteExercise = async (exercise: Exercise) => {
 	synced.set(false)
 	if (!exercise.id) return
 	console.log(exercise.id)
+	// @ts-ignore
 	await idb.delete("exercises", exercise.id)
+}
+
+export const getAll = async (storeName: "meta" | "exercises") => {
+	return await idb.getAll(storeName)
 }

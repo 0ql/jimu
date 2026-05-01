@@ -52,6 +52,12 @@
 			<i class="i-tabler-list block size-6"></i>
 		</Button.Root>
 		<Button.Root
+			href="/analytics"
+			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
+		>
+			<i class="i-tabler-device-analytics block size-6"></i>
+		</Button.Root>
+		<Button.Root
 			onclick={sync}
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>

@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { type DB, type Exercise, loadDB, synced } from "./idb";
+	import {
+		type DB,
+		type Exercise,
+		exercises,
+		getAll,
+		loadDB,
+		loadExercises,
+		synced,
+	} from "./idb";
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
 
@@ -8,15 +16,8 @@
 	import Nav from "./Nav.svelte";
 
 	let searchString: string = $state("");
-	let exercises: Exercise[] = $state([]);
 	let db: IDBPDatabase<DB>;
-
 	let { data }: PageProps = $props();
-
-	const loadExercises = async () => {
-		db = await loadDB();
-		exercises = await db.getAll("exercises");
-	};
 
 	const createHash = async (json: string): Promise<string> => {
 		const encoded = new TextEncoder().encode(json);
@@ -45,20 +46,22 @@
 	};
 
 	onMount(async () => {
+		db = await loadDB();
 		await loadExercises();
-		if (exercises.length === 0 && !data.hash) {
+		if ($exercises.length === 0 && !data.hash) {
 			console.log("No Exercises stored locally and none on server");
 			return;
 		}
-		if (exercises.length === 0) {
+		if ($exercises.length === 0) {
 			console.log(
 				"No Exercises found locally. But Server has Exercises. Syncing from server...",
 			);
 			return syncFromServer();
 		}
 		const hash = await createHash(JSON.stringify(exercises));
-		const meta = await db.getAll("meta");
+		const meta = await getAll("meta");
 		if (data.hash !== hash) {
+			// @ts-ignore
 			if ((data.lastModified ?? new Date(0)) > new Date(meta[0]?.lastChanged)) {
 				console.log("Server version is newer. Syncing from server...");
 				return syncFromServer();
@@ -70,7 +73,7 @@
 
 <main class="p-4">
 	<div class="mt-36">
-		{#each exercises as exercise}
+		{#each $exercises as exercise}
 			{#if exercise.title
 				.toLowerCase()
 				.normalize("NFD")
