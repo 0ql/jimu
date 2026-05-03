@@ -3,11 +3,12 @@
 	import "./main.css";
 	import { Button } from "bits-ui";
 	import { synced, syncToServer } from "./idb";
+	import type { Snippet } from "svelte";
 
 	let {
-		searchString = $bindable(""),
 		onadd = undefined,
-	}: { searchString?: string; onadd?: () => void } = $props();
+		children = undefined,
+	}: { onadd?: () => void; children?: Snippet } = $props();
 
 	let currentTime = $state("");
 	const updateTime = () => {
@@ -71,9 +72,5 @@
 		{/if}
 	</div>
 
-	<input
-		placeholder="Search..."
-		class="w-full mt-4 bg-bg rounded-lg border-solid border-1 border-border-input px-6 py-3 text-xl outline-none"
-		bind:value={searchString}
-	/>
+	{@render children?.()}
 </nav>

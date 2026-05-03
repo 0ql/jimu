@@ -1,47 +1,76 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
-	import { Button } from "bits-ui";
+	import Anchor from "$lib/ui/Anchor.svelte";
+	import Btn from "$lib/ui/Button.svelte";
+	import Input from "$lib/ui/Input.svelte";
 
 	const credentials = $state({
 		username: "",
 		password: "",
 	});
 
-	const login = async () => {
-		const res = await fetch("/login", {
-			method: "POST",
-			body: JSON.stringify(credentials),
-		});
+	let error = $state("");
+	let loading = $state(false);
 
-		if (res.status !== 200) {
-			alert("error logging in");
-			return;
+	const login = async () => {
+		error = "";
+		loading = true;
+		try {
+			const res = await fetch("/login", {
+				method: "POST",
+				body: JSON.stringify(credentials),
+			});
+
+			if (res.status !== 200) {
+				error = "Invalid username or password";
+				return;
+			}
+			goto("/");
+		} finally {
+			loading = false;
 		}
-		goto("/");
 	};
 </script>
 
-<main class="flex justify-center items-center w-full">
+<main
+	class="flex flex-col justify-center items-center w-full min-h-screen gap-8 px-4 relative overflow-hidden"
+>
+	<h1 class="text-7xl font-black tracking-widest m-0 leading-none">JIMU</h1>
+
 	<section
-		class="max-w-100 bg-bg-alt border-solid border-1 rounded-lg border-border-card px-4 pb-3"
+		class="relative w-full max-w-sm bg-bg-alt border-solid border-1 border-muted rounded-xl px-6 py-6 overflow-hidden"
 	>
-		<h1 class="text-lg font-bold">Login to jimu</h1>
-		<input
-			class="w-full p-3 rounded-lg bg-bg border-solid border-1 border-border-input"
+		<p class="text-xs uppercase tracking-widest text-fg-alt mb-4 m-0">
+			Sign in to continue
+		</p>
+		<Input
 			placeholder="Username"
 			bind:value={credentials.username}
 			type="text"
 		/>
-		<input
-			class="w-full p-3 rounded-lg bg-bg border-solid border-1 border-border-input mt-3"
+		<Input
 			placeholder="Password"
 			bind:value={credentials.password}
 			type="password"
+			cl="mt-3"
+			onkeydown={(e) => e.key === "Enter" && login()}
 		/>
-		<Button.Root
+
+		{#if error}
+			<p
+				class="text-xs text-destructive mt-3 m-0 text-center uppercase tracking-widest font-bold"
+			>
+				{error}
+			</p>
+		{/if}
+
+		<Btn
 			onclick={login}
-			class="w-full mt-3 bg-dark text-bg rounded-lg p-1.5 text-lg font-semibold border-none"
-			>Login</Button.Root
+			cl="bg-destructive cursor-pointer mt-4 text-white"
+			disabled={loading}
 		>
+			{loading ? "Logging in..." : "Login"}
+		</Btn>
+		<Anchor href="/signup" cl="mt-2">No account? Sign up</Anchor>
 	</section>
 </main>

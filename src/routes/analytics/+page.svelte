@@ -49,7 +49,8 @@
 				let lastWeight = 0;
 
 				while ((match = setRegex.exec(row)) !== null) {
-					const weight = match[1] !== undefined ? parseFloat(match[1]) : lastWeight;
+					const weight =
+						match[1] !== undefined ? parseFloat(match[1]) : lastWeight;
 					const reps = parseInt(match[2]);
 					lastWeight = weight;
 
@@ -113,7 +114,7 @@
 </script>
 
 <main class="p-4">
-	<div class="mt-36">
+	<div class="mt-20">
 		<div>
 			<p class="text-xs color-fg-alt mb-1">Exercise</p>
 			<div class="relative">

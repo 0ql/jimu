@@ -14,9 +14,12 @@
 
 	import ExerciseComponent from "./Exercise.svelte";
 	import Nav from "./Nav.svelte";
+	import SearchBar from "./SearchBar.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
 	import { toast } from "$lib/toast.svelte";
 	import { addExercise } from "./idb";
+	import Input from "$lib/ui/Input.svelte";
+	import Btn from "$lib/ui/Button.svelte";
 
 	let searchString: string = $state("");
 	let db: IDBPDatabase<DB>;
@@ -74,7 +77,6 @@
 				await syncFromServer();
 				return loadExercises();
 			}
-			toast.success("Local version is up to date.");
 		}
 	});
 </script>
@@ -97,18 +99,28 @@
 </main>
 
 <Popup title="New Exercise" bind:showPopup={showAddPopup}>
-	<input
+	<Input
 		placeholder="Exercise name"
-		class="w-full mt-4 bg-bg rounded-lg border-solid border-1 border-border-input px-4 py-3 text-xl outline-none"
 		bind:value={newTitle}
-		onkeydown={(e) => e.key === "Enter" && newTitle.trim() && (addExercise(newTitle.trim()), newTitle = "", showAddPopup = false)}
+		cl="mt-4 text-xl"
+		onkeydown={(e) =>
+			e.key === "Enter" &&
+			newTitle.trim() &&
+			(addExercise(newTitle.trim()), (newTitle = ""), (showAddPopup = false))}
 	/>
-	<button
-		class="w-full mt-3 bg-dark text-bg rounded-lg p-1.5 text-lg font-semibold border-none cursor-pointer"
-		onclick={() => { if (!newTitle.trim()) return; addExercise(newTitle.trim()); newTitle = ""; showAddPopup = false; }}
+	<Btn
+		cl="cursor-pointer"
+		onclick={() => {
+			if (!newTitle.trim()) return;
+			addExercise(newTitle.trim());
+			newTitle = "";
+			showAddPopup = false;
+		}}
 	>
 		Add
-	</button>
+	</Btn>
 </Popup>
 
-<Nav bind:searchString onadd={() => (showAddPopup = true)} />
+<Nav onadd={() => (showAddPopup = true)}>
+	<SearchBar bind:value={searchString} />
+</Nav>
