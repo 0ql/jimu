@@ -24,7 +24,7 @@
 	setInterval(updateTime, 1000);
 </script>
 
-<nav class="fixed left-0 right-0 top-0 p-4 bg-bg shadow-xl shadow-bg">
+<nav class="fixed left-0 right-0 top-0 px-10 pt-6 bg-bg shadow-xl shadow-bg">
 	<div class="flex gap-2">
 		<section
 			class="border-solid border-1 border-border-input bg-bg rounded-lg h-10 px-2 flex justify-center items-center"

@@ -10,6 +10,8 @@
 	import Nav from "../Nav.svelte";
 	import Card from "$lib/ui/Card.svelte";
 	import PageTitle from "$lib/ui/PageTitle.svelte";
+	import H2 from "$lib/ui/H2.svelte";
+	import Select from "$lib/ui/Select.svelte";
 
 	let selection: number;
 	let selectedExercise: Exercise | null = $state(null);
@@ -50,8 +52,7 @@
 				let lastWeight = 0;
 
 				while ((match = setRegex.exec(row)) !== null) {
-					const weight =
-						match[1] !== undefined ? parseFloat(match[1]) : lastWeight;
+					const weight = match[1] !== undefined ? parseFloat(match[1]) : lastWeight;
 					const reps = parseInt(match[2]);
 					lastWeight = weight;
 
@@ -74,35 +75,24 @@
 	};
 
 	const showExercise = () => {
-		selectedExercise = $exercises.filter(
-			(exercise) => exercise.id === selection,
-		)[0];
-		const cleanData = parseWorkoutData(
-			selectedExercise.workoutsString.split("\n"),
-		);
+		selectedExercise = $exercises.filter((exercise) => exercise.id === selection)[0];
+		const cleanData = parseWorkoutData(selectedExercise.workoutsString.split("\n"));
 		points = cleanData;
 	};
 
 	let yAxisField = $state("y");
 
 	const metricLabel = $derived(
-		yAxisField === "y"
-			? "Volume"
-			: yAxisField === "maxWeight"
-				? "Max Weight"
-				: "Total Reps",
+		yAxisField === "y" ? "Volume" : yAxisField === "maxWeight" ? "Max Weight" : "Total Reps",
 	);
 	const metricUnit = $derived(yAxisField === "totalReps" ? "" : " kg");
 
 	const stats = $derived.by(() => {
 		if (!points.length) return null;
-		const best = [...points].reduce((a: any, b: any) =>
-			b[yAxisField] > a[yAxisField] ? b : a,
-		);
+		const best = [...points].reduce((a: any, b: any) => (b[yAxisField] > a[yAxisField] ? b : a));
 		const last = [...points].reduce((a: any, b: any) => (b.x > a.x ? b : a));
 		const avg = Math.round(
-			points.reduce((s: number, p: any) => s + p[yAxisField], 0) /
-				points.length,
+			points.reduce((s: number, p: any) => s + p[yAxisField], 0) / points.length,
 		);
 		const fmt = (d: Date) =>
 			d.toLocaleDateString("de-DE", {
@@ -114,51 +104,27 @@
 	});
 </script>
 
-<main class="px-4 pt-24 pb-8 max-w-lg mx-auto flex flex-col gap-4">
-	<PageTitle>Analytics</PageTitle>
+<main class="pt-24 pb-8 mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+	<PageTitle cl="mb-4 col-span-full">Analytics</PageTitle>
 
-	<Card cl="flex flex-col gap-4">
-		<h2 class="text-xs uppercase tracking-widest text-fg-alt m-0">Exercise</h2>
-		<div class="relative">
-			<select
-				class="w-full bg-bg rounded-lg border-solid border-1 border-border-input px-4 py-3 outline-none appearance-none cursor-pointer pr-10"
-				bind:value={selection}
-				onchange={showExercise}
-			>
-				{#each $exercises as exercise}
-					<option class="bg-bg" value={exercise.id}>{exercise.title}</option>
-				{/each}
-			</select>
-			<i
-				class="i-tabler-chevron-down absolute right-3 top-1/2 -translate-y-1/2 size-4 pointer-events-none color-fg-alt"
-			></i>
-		</div>
+	<Card cl="col-span-full md:col-span-1">
+		<H2>Exercise</H2>
+		<Select bind:value={selection} onchange={showExercise}>
+			{#each $exercises as exercise}
+				<option class="bg-bg" value={exercise.id}>{exercise.title}</option>
+			{/each}
+		</Select>
 
-		<h2 class="text-xs uppercase tracking-widest text-fg-alt m-0">Metric</h2>
-		<div class="relative">
-			<select
-				class="w-full bg-bg rounded-lg border-solid border-1 border-border-input px-4 py-3 outline-none appearance-none cursor-pointer pr-10"
-				bind:value={yAxisField}
-				onchange={showExercise}
-			>
-				<option class="bg-bg" value="y">Volume</option>
-				<option class="bg-bg" value="maxWeight">Max Weight</option>
-				<option class="bg-bg" value="totalReps">Total Reps</option>
-			</select>
-			<i
-				class="i-tabler-chevron-down absolute right-3 top-1/2 -translate-y-1/2 size-4 pointer-events-none color-fg-alt"
-			></i>
-		</div>
+		<H2 cl="mt-3">Metric</H2>
+		<Select bind:value={yAxisField} onchange={showExercise}>
+			<option class="bg-bg" value="y">Volume</option>
+			<option class="bg-bg" value="maxWeight">Max Weight</option>
+			<option class="bg-bg" value="totalReps">Total Reps</option>
+		</Select>
 	</Card>
 
-	<Card cl="h-64 p-8">
-		<LayerCake
-			x="x"
-			y={yAxisField}
-			data={points}
-			xScale={scaleTime()}
-			padding={{ left: 30 }}
-		>
+	<Card cl="col-span-full md:col-span-3 h-64 p-8">
+		<LayerCake x="x" y={yAxisField} data={points} xScale={scaleTime()} padding={{ left: 30 }}>
 			<Svg>
 				<Scatter fill={"white"} r={3} />
 				<AxisX
@@ -177,31 +143,27 @@
 	</Card>
 
 	{#if stats}
-		<div class="grid grid-cols-2 gap-3">
-			<Card label="Sessions">
-				<p class="text-2xl font-semibold mt-1">{stats.total}</p>
-			</Card>
-			<Card label="Avg {metricLabel}">
-				<p class="text-2xl font-semibold mt-1">{stats.avg}{metricUnit}</p>
-			</Card>
-			<Card label="Best {metricLabel}">
-				<p class="text-2xl font-semibold mt-1">
-					{stats.best[yAxisField]}{metricUnit}
-				</p>
-				<p class="text-xs color-fg-alt mt-1">{stats.fmt(stats.best.x)}</p>
-			</Card>
-			<Card label="Last Session">
-				<p class="text-2xl font-semibold mt-1">{stats.fmt(stats.last.x)}</p>
-			</Card>
-		</div>
+		<Card label="Sessions">
+			<p class="text-2xl font-semibold mt-1">{stats.total}</p>
+		</Card>
+		<Card label="Avg {metricLabel}">
+			<p class="text-2xl font-semibold mt-1">{stats.avg}{metricUnit}</p>
+		</Card>
+		<Card label="Best {metricLabel}">
+			<p class="text-2xl font-semibold mt-1">
+				{stats.best[yAxisField]}{metricUnit}
+			</p>
+			<p class="text-xs color-fg-alt mt-1">{stats.fmt(stats.best.x)}</p>
+		</Card>
+		<Card label="Last Session">
+			<p class="text-2xl font-semibold mt-1">{stats.fmt(stats.last.x)}</p>
+		</Card>
 	{/if}
 
 	{#if selectedExercise}
-		<Card>
+		<Card cl="col-span-full">
 			<details>
-				<summary
-					class="py-1 cursor-pointer text-sm font-semibold list-none color-fg-alt"
-				>
+				<summary class="py-1 cursor-pointer text-sm font-semibold list-none color-fg-alt">
 					Raw data
 				</summary>
 				<p class="text-sm mt-2 leading-relaxed">

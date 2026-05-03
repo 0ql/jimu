@@ -71,35 +71,33 @@
 	});
 </script>
 
-<main class="p-4">
-	<div class="mt-36 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-		{#each $exercises as exercise}
-			{#if exercise.title
-				.toLowerCase()
-				.normalize("NFD")
-				.replace(/[\u0300-\u036f]/g, "")
-				.includes(searchString
-						.toLowerCase()
-						.normalize("NFD")
-						.replace(/[\u0300-\u036f]/g, ""))}
-				<ExerciseComponent {exercise} />
-			{/if}
-		{/each}
-	</div>
+<main class="mt-42 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+	{#each $exercises as exercise}
+		{#if exercise.title
+			.toLowerCase()
+			.normalize("NFD")
+			.replace(/[\u0300-\u036f]/g, "")
+			.includes(searchString
+					.toLowerCase()
+					.normalize("NFD")
+					.replace(/[\u0300-\u036f]/g, ""))}
+			<ExerciseComponent {exercise} />
+		{/if}
+	{/each}
 </main>
 
 <Popup title="New Exercise" bind:showPopup={showAddPopup}>
 	<Input
 		placeholder="Exercise name"
 		bind:value={newTitle}
-		cl="mt-4 text-xl"
+		cl="text-xl"
 		onkeydown={(e) =>
 			e.key === "Enter" &&
 			newTitle.trim() &&
 			(addExercise(newTitle.trim()), (newTitle = ""), (showAddPopup = false))}
 	/>
 	<Btn
-		cl="cursor-pointer"
+		cl="cursor-pointer mt-3"
 		onclick={() => {
 			if (!newTitle.trim()) return;
 			addExercise(newTitle.trim());

@@ -8,6 +8,8 @@
 	import PageTitle from "$lib/ui/PageTitle.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
 	import Nav from "../Nav.svelte";
+	import H2 from "$lib/ui/H2.svelte";
+	import InfoText from "$lib/ui/InfoText.svelte";
 
 	let db: IDBPDatabase<DB>;
 
@@ -45,35 +47,37 @@
 	};
 </script>
 
-<main class="px-4 pt-24 pb-8 max-w-lg mx-auto flex flex-col gap-4">
-	<PageTitle>Settings</PageTitle>
+<main class="pt-24 grid grid-cols-1 md:grid-cols-3 gap-4">
+	<PageTitle cl="mb-3 col-span-full">Settings</PageTitle>
 
-	<Card>
-		<p class="text-xs uppercase tracking-widest text-fg-alt mb-3 m-0">Import</p>
-		<p class="text-sm text-fg-alt mb-3 m-0">Import exercises using the jimu syntax</p>
+	<Card cl="md:col-span-2">
+		<H2>Import</H2>
+		<InfoText cl="mb-2">Import exercises using the jimu syntax</InfoText>
 		<textarea
-			class="w-full bg-bg rounded-lg border-solid border-1 border-border-input px-4 py-3 outline-none text-sm"
+			class="w-full bg-bg rounded-lg border-solid border-1 border-border-input px-4 py-3 outline-none text-sm mb-2"
 			placeholder="Paste exercise string here..."
 			bind:value={settings.import}
 		></textarea>
 		<Btn onclick={importData} cl="cursor-pointer">Save</Btn>
 	</Card>
 
-	<Card>
-		<p class="text-xs uppercase tracking-widest text-fg-alt mb-3 m-0">Account</p>
-		<Btn onclick={logout} cl="bg-muted cursor-pointer mt-0 text-white">Logout</Btn>
-	</Card>
+	<div class="flex flex-col gap-4">
+		<Card>
+			<H2>Account</H2>
+			<Btn onclick={logout} cl="bg-muted cursor-pointer mt-0 text-white">Logout</Btn>
+		</Card>
 
-	<Card>
-		<p class="text-xs uppercase tracking-widest text-destructive mb-3 m-0">Danger Zone</p>
-		<Btn
-			onclick={() => (showDeletePopup = true)}
-			cl="bg-destructive cursor-pointer mt-0"
-			style="color: #fff;"
-		>
-			Delete all Exercises
-		</Btn>
-	</Card>
+		<Card>
+			<p class="text-xs uppercase tracking-widest text-destructive mb-2">Danger Zone</p>
+			<Btn
+				onclick={() => (showDeletePopup = true)}
+				cl="bg-destructive cursor-pointer"
+				style="color: #fff;"
+			>
+				Delete all Exercises
+			</Btn>
+		</Card>
+	</div>
 </main>
 
 <Popup title="Confirm Deletion" bind:showPopup={showDeletePopup}>

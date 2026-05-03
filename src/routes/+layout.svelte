@@ -8,8 +8,11 @@
 </script>
 
 <svelte:head>
+	<title>jimu</title>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-{@render children()}
+<div class="px-10">
+	{@render children()}
+</div>
 <Toasts />

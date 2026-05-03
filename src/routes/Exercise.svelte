@@ -7,7 +7,6 @@
 
 	let { exercise = $bindable() }: { exercise: Exercise } = $props();
 	let showPopup = $state(false);
-	// let exercise = $state(exercise);
 </script>
 
 <Card>
