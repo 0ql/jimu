@@ -1,14 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import {
-		type DB,
-		type Exercise,
-		exercises,
-		getAll,
-		loadDB,
-		loadExercises,
-		synced,
-	} from "./idb";
+	import { type DB, type Exercise, exercises, getAll, loadDB, loadExercises, synced } from "./idb";
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
 
@@ -62,9 +54,7 @@
 			return;
 		}
 		if ($exercises.length === 0) {
-			toast.success(
-				"No Exercises found locally. But Server has Exercises. Syncing from server...",
-			);
+			toast.success("No Exercises found locally. But Server has Exercises. Syncing from server...");
 			await syncFromServer();
 			return loadExercises();
 		}

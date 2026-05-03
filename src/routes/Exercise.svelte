@@ -1,10 +1,5 @@
 <script lang="ts">
-	import {
-		deleteExercise,
-		type Exercise,
-		loadExercises,
-		saveExercise,
-	} from "./idb";
+	import { deleteExercise, type Exercise, loadExercises, saveExercise } from "./idb";
 
 	import Btn from "$lib/ui/Button.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
@@ -29,8 +24,7 @@
 		></button>
 	</h2>
 	<details>
-		<summary
-			class="py-3 cursor-pointer text-sm font-semibold list-none color-fg-alt"
+		<summary class="py-3 cursor-pointer text-sm font-semibold list-none color-fg-alt"
 			>Show...</summary
 		>
 		<textarea

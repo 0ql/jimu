@@ -1,14 +1,11 @@
 <script lang="ts">
 	import "virtual:uno.css";
 	import "./main.css";
-	import { Button } from "bits-ui";
 	import { synced, syncToServer } from "./idb";
 	import type { Snippet } from "svelte";
 
-	let {
-		onadd = undefined,
-		children = undefined,
-	}: { onadd?: () => void; children?: Snippet } = $props();
+	let { onadd = undefined, children = undefined }: { onadd?: () => void; children?: Snippet } =
+		$props();
 
 	let currentTime = $state("");
 	const updateTime = () => {
@@ -34,19 +31,19 @@
 		>
 			{currentTime}
 		</section>
-		<Button.Root
+		<a
 			href="/"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			<i class="i-tabler-list block size-6"></i>
-		</Button.Root>
-		<Button.Root
+		</a>
+		<a
 			href="/analytics"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			<i class="i-tabler-device-analytics block size-6"></i>
-		</Button.Root>
-		<Button.Root
+		</a>
+		<button
 			onclick={syncToServer}
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
@@ -55,20 +52,20 @@
 			{:else}
 				<i class="i-tabler-cloud-x bg-destructive block size-6"></i>
 			{/if}
-		</Button.Root>
-		<Button.Root
+		</button>
+		<a
 			href="/settings"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			<i class="i-tabler-settings block size-6"></i>
-		</Button.Root>
+		</a>
 		{#if onadd}
-			<Button.Root
+			<button
 				onclick={onadd}
 				class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center ml-auto"
 			>
 				<i class="i-tabler-plus block size-6"></i>
-			</Button.Root>
+			</button>
 		{/if}
 	</div>
 
