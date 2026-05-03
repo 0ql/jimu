@@ -1,0 +1,5 @@
+FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|js|svelte|json|css)$' | tr '\n' ' ')
+if [ -n "$FILES" ]; then
+  pnpm exec prettier --write $FILES
+  git add -u
+fi
