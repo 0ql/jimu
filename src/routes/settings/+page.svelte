@@ -6,6 +6,7 @@
 	import { goto } from "$app/navigation";
 	import Card from "$lib/ui/Card.svelte";
 	import Btn from "$lib/ui/Button.svelte";
+	import PageTitle from "$lib/ui/PageTitle.svelte";
 	import Nav from "../Nav.svelte";
 
 	let db: IDBPDatabase<DB>;
@@ -43,11 +44,13 @@
 </script>
 
 <main class="px-4 pt-24 pb-8 max-w-lg mx-auto flex flex-col gap-4">
-	<h1 class="text-3xl font-black uppercase tracking-widest m-0">Settings</h1>
+	<PageTitle>Settings</PageTitle>
 
 	<Card>
 		<p class="text-xs uppercase tracking-widest text-fg-alt mb-3 m-0">Import</p>
-		<p class="text-sm text-fg-alt mb-3 m-0">Import exercises using the jimu syntax</p>
+		<p class="text-sm text-fg-alt mb-3 m-0">
+			Import exercises using the jimu syntax
+		</p>
 		<textarea
 			class="w-full bg-bg rounded-lg border-solid border-1 border-border-input px-4 py-3 outline-none text-sm"
 			placeholder="Paste exercise string here..."
@@ -57,12 +60,16 @@
 	</Card>
 
 	<Card>
-		<p class="text-xs uppercase tracking-widest text-fg-alt mb-3 m-0">Account</p>
+		<p class="text-xs uppercase tracking-widest text-fg-alt mb-3 m-0">
+			Account
+		</p>
 		<Btn onclick={logout} cl="bg-muted cursor-pointer mt-0">Logout</Btn>
 	</Card>
 
 	<Card>
-		<p class="text-xs uppercase tracking-widest text-destructive mb-3 m-0">Danger Zone</p>
+		<p class="text-xs uppercase tracking-widest text-destructive mb-3 m-0">
+			Danger Zone
+		</p>
 		<AlertDialog.Root>
 			<AlertDialog.Trigger
 				class="w-full bg-destructive rounded-lg py-2.5 text-sm font-bold uppercase tracking-widest border-none cursor-pointer"

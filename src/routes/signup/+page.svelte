@@ -3,6 +3,7 @@
 	import Input from "$lib/ui/Input.svelte";
 	import Btn from "$lib/ui/Button.svelte";
 	import Anchor from "$lib/ui/Anchor.svelte";
+	import PageTitle from "$lib/ui/PageTitle.svelte";
 
 	const credentials = $state({
 		username: "",
@@ -59,7 +60,7 @@
 <main
 	class="flex flex-col justify-center items-center w-full min-h-screen gap-8 px-4"
 >
-	<h1 class="text-7xl font-black uppercase tracking-widest m-0">JIMU</h1>
+	<PageTitle cl="text-7xl">JIMU</PageTitle>
 
 	<section
 		class="w-full max-w-sm bg-bg-alt border-solid border-1 border-muted rounded-xl px-6 py-6"
