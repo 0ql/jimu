@@ -7,6 +7,12 @@ export type Exercise = {
 	workoutsString: string;
 };
 
+export type Routine = {
+	id?: number;
+	name: string;
+	exerciseIds: number[];
+};
+
 export interface DB extends DBSchema {
 	exercises: {
 		key: string;
@@ -17,8 +23,12 @@ export interface DB extends DBSchema {
 		value: {
 			id?: number;
 			lastChanged: number;
-		}
-	}
+		};
+	};
+	routines: {
+		key: number;
+		value: Routine;
+	};
 }
 
 export let idb: IDBPDatabase<DB>;
@@ -27,7 +37,10 @@ export const synced = writable(true);
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const syncToServer = async () => {
-	if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+	if (syncTimer) {
+		clearTimeout(syncTimer);
+		syncTimer = null;
+	}
 	const exercises = await idb.getAll("exercises");
 	const res = await fetch("/", { method: "POST", body: JSON.stringify(exercises) });
 	if (res.ok) synced.set(true);
@@ -39,36 +52,38 @@ const scheduleSync = () => {
 };
 
 export const exercises: Writable<Exercise[]> = writable([]);
+export const routines: Writable<Routine[]> = writable([]);
 
 const updateMeta = async () => {
-	await idb.put("meta", { id: 1, lastChanged: Date.now() })
-}
+	await idb.put("meta", { id: 1, lastChanged: Date.now() });
+};
 
 export const loadDB = async () => {
-	if (idb) return idb
-	idb = await openDB<DB>("main", 2, {
-		async upgrade(db, oldVersion, newVersion, transaction, event) {
-			if (!db.objectStoreNames.contains('exercises')) {
-				console.log("Creating Exercises store")
-				db.createObjectStore("exercises", {
-					keyPath: "id",
-					autoIncrement: true,
-				});
+	if (idb) return idb;
+	idb = await openDB<DB>("main", 3, {
+		async upgrade(db, oldVersion) {
+			if (!db.objectStoreNames.contains("exercises")) {
+				db.createObjectStore("exercises", { keyPath: "id", autoIncrement: true });
 			}
-			if (!db.objectStoreNames.contains('meta')) {
-				console.log("Creating Meta store")
-				db.createObjectStore("meta", {
-					keyPath: "id",
-				})
+			if (!db.objectStoreNames.contains("meta")) {
+				db.createObjectStore("meta", { keyPath: "id" });
+			}
+			if (!db.objectStoreNames.contains("routines")) {
+				db.createObjectStore("routines", { keyPath: "id", autoIncrement: true });
 			}
 		},
 	});
-	return idb
-}
+	return idb;
+};
 
 export const loadExercises = async () => {
 	const db = await loadDB();
 	exercises.set(await db.getAll("exercises"));
+};
+
+export const loadRoutines = async () => {
+	const db = await loadDB();
+	routines.set(await db.getAll("routines"));
 };
 
 export const addExercise = async (title: string) => {
@@ -97,9 +112,39 @@ export const deleteExercise = async (exercise: Exercise) => {
 	if (!exercise.id) return;
 	// @ts-ignore
 	await idb.delete("exercises", exercise.id);
+	await removeExerciseFromAllRoutines(exercise.id);
 	scheduleSync();
 };
 
+export const addRoutine = async (name: string, exerciseIds: number[]) => {
+	await idb.add("routines", { name, exerciseIds: Array.from(exerciseIds) });
+	await loadRoutines();
+};
+
+export const saveRoutine = async (routine: Routine) => {
+	await idb.put("routines", { ...routine, exerciseIds: Array.from(routine.exerciseIds) });
+	await loadRoutines();
+};
+
+export const deleteRoutine = async (routine: Routine) => {
+	if (!routine.id) return;
+	await idb.delete("routines", routine.id);
+	await loadRoutines();
+};
+
+const removeExerciseFromAllRoutines = async (exerciseId: number) => {
+	const all = await idb.getAll("routines");
+	for (const routine of all) {
+		if (routine.exerciseIds.includes(exerciseId)) {
+			await idb.put("routines", {
+				...routine,
+				exerciseIds: routine.exerciseIds.filter((id) => id !== exerciseId),
+			});
+		}
+	}
+	await loadRoutines();
+};
+
 export const getAll = async (storeName: "meta" | "exercises") => {
-	return await idb.getAll(storeName)
-}
+	return await idb.getAll(storeName);
+};

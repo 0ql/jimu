@@ -1,6 +1,17 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { type DB, type Exercise, exercises, getAll, loadDB, loadExercises, synced } from "./idb";
+	import {
+		type DB,
+		type Exercise,
+		exercises,
+		routines,
+		getAll,
+		loadDB,
+		loadExercises,
+		loadRoutines,
+		synced,
+		addExercise,
+	} from "./idb";
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
 
@@ -9,7 +20,6 @@
 	import SearchBar from "./SearchBar.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
 	import { toast } from "$lib/toast.svelte";
-	import { addExercise } from "./idb";
 	import Input from "$lib/ui/Input.svelte";
 	import Btn from "$lib/ui/Button.svelte";
 
@@ -18,6 +28,7 @@
 	let { data }: PageProps = $props();
 	let showAddPopup = $state(false);
 	let newTitle = $state("");
+	let selectedRoutineId: number | null = $state(null);
 
 	const createHash = (json: string): string => {
 		let h = 0;
@@ -38,10 +49,7 @@
 				workoutsString: exercise.workoutsString,
 			});
 		});
-		await db.put("meta", {
-			id: 1,
-			lastChanged: Date.now(),
-		});
+		await db.put("meta", { id: 1, lastChanged: Date.now() });
 		synced.set(true);
 		loadExercises();
 	};
@@ -49,6 +57,7 @@
 	onMount(async () => {
 		db = await loadDB();
 		await loadExercises();
+		await loadRoutines();
 		if ($exercises.length === 0 && !data.hash) {
 			toast.success("No Exercises stored locally and none on server");
 			return;
@@ -69,21 +78,55 @@
 			}
 		}
 	});
+
+	const activeRoutine = $derived(
+		selectedRoutineId !== null ? ($routines.find((r) => r.id === selectedRoutineId) ?? null) : null,
+	);
+
+	const visibleExercises = $derived(
+		$exercises.filter((exercise) => {
+			const inRoutine = activeRoutine === null || activeRoutine.exerciseIds.includes(exercise.id!);
+			const matchesSearch = exercise.title
+				.toLowerCase()
+				.normalize("NFD")
+				.replace(/[̀-ͯ]/g, "")
+				.includes(searchString.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""));
+			return inRoutine && matchesSearch;
+		}),
+	);
 </script>
 
-<main class="mt-42 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-	{#each $exercises as exercise}
-		{#if exercise.title
-			.toLowerCase()
-			.normalize("NFD")
-			.replace(/[\u0300-\u036f]/g, "")
-			.includes(searchString
-					.toLowerCase()
-					.normalize("NFD")
-					.replace(/[\u0300-\u036f]/g, ""))}
+<main class="mt-42 pb-8">
+	{#if $routines.length > 0}
+		<div class="flex gap-2 mb-4 flex-wrap">
+			<button
+				onclick={() => (selectedRoutineId = null)}
+				class="px-3 py-1 rounded-full text-sm font-semibold border-solid border-1 cursor-pointer transition-colors
+					{selectedRoutineId === null
+					? 'bg-dark text-bg border-dark'
+					: 'bg-transparent border-muted text-fg-alt'}"
+			>
+				All
+			</button>
+			{#each $routines as routine}
+				<button
+					onclick={() => (selectedRoutineId = routine.id!)}
+					class="px-3 py-1 rounded-full text-sm font-semibold border-solid border-1 cursor-pointer transition-colors
+						{selectedRoutineId === routine.id
+						? 'bg-dark text-bg border-dark'
+						: 'bg-transparent border-muted text-fg-alt'}"
+				>
+					{routine.name}
+				</button>
+			{/each}
+		</div>
+	{/if}
+
+	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+		{#each visibleExercises as exercise}
 			<ExerciseComponent {exercise} />
-		{/if}
-	{/each}
+		{/each}
+	</div>
 </main>
 
 <Popup title="New Exercise" bind:showPopup={showAddPopup}>
