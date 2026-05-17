@@ -106,15 +106,18 @@
 	);
 
 	const visibleExercises = $derived(
-		$exercises.filter((exercise) => {
-			const inRoutine = activeRoutine === null || activeRoutine.exerciseIds.includes(exercise.id!);
-			const matchesSearch = exercise.title
-				.toLowerCase()
-				.normalize("NFD")
-				.replace(/[̀-ͯ]/g, "")
-				.includes(searchString.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""));
-			return inRoutine && matchesSearch;
-		}),
+		$exercises
+			.filter((exercise) => {
+				const inRoutine =
+					activeRoutine === null || activeRoutine.exerciseIds.includes(exercise.id!);
+				const matchesSearch = exercise.title
+					.toLowerCase()
+					.normalize("NFD")
+					.replace(/[̀-ͯ]/g, "")
+					.includes(searchString.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""));
+				return inRoutine && matchesSearch;
+			})
+			.sort((a, b) => a.title.localeCompare(b.title)),
 	);
 </script>
 
