@@ -16,6 +16,7 @@
 	import Input from "$lib/ui/Input.svelte";
 	import PageTitle from "$lib/ui/PageTitle.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
+	import Checkbox from "$lib/ui/Checkbox.svelte";
 
 	onMount(async () => {
 		await loadExercises();
@@ -92,15 +93,11 @@
 	<p class="text-xs uppercase tracking-widest text-fg-alt mt-4 mb-2 m-0">Exercises</p>
 	<div class="flex flex-col gap-2 overflow-y-auto max-h-48">
 		{#each $exercises as exercise}
-			<label class="flex items-center gap-3 cursor-pointer">
-				<input
-					type="checkbox"
-					checked={selectedExerciseIds.includes(exercise.id!)}
-					onchange={() => toggleExercise(exercise.id!)}
-					class="size-4 cursor-pointer accent-destructive"
-				/>
-				<span class="text-sm">{exercise.title}</span>
-			</label>
+			<Checkbox
+				label={exercise.title}
+				checked={selectedExerciseIds.includes(exercise.id!)}
+				onchange={() => toggleExercise(exercise.id!)}
+			/>
 		{/each}
 	</div>
 	<Btn onclick={create} cl="cursor-pointer mt-3">Create</Btn>
@@ -110,15 +107,11 @@
 	<p class="text-xs uppercase tracking-widest text-fg-alt mt-2 mb-2 m-0">Exercises</p>
 	<div class="flex flex-col gap-2 overflow-y-auto max-h-48">
 		{#each $exercises as exercise}
-			<label class="flex items-center gap-3 cursor-pointer">
-				<input
-					type="checkbox"
-					checked={selectedExerciseIds.includes(exercise.id!)}
-					onchange={() => toggleExercise(exercise.id!)}
-					class="size-4 cursor-pointer accent-destructive"
-				/>
-				<span class="text-sm">{exercise.title}</span>
-			</label>
+			<Checkbox
+				label={exercise.title}
+				checked={selectedExerciseIds.includes(exercise.id!)}
+				onchange={() => toggleExercise(exercise.id!)}
+			/>
 		{/each}
 	</div>
 	<Btn onclick={save} cl="cursor-pointer mt-3">Save</Btn>

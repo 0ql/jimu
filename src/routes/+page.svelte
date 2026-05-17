@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import {
 		type DB,
-		type Exercise,
+		type Routine,
 		exercises,
 		routines,
 		getAll,
@@ -11,6 +11,9 @@
 		loadRoutines,
 		synced,
 		addExercise,
+		syncToServer,
+		syncRoutinesToServer,
+		getRoutineMetaTimestamp,
 	} from "./idb";
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
@@ -30,52 +33,71 @@
 	let newTitle = $state("");
 	let selectedRoutineId: number | null = $state(null);
 
-	const createHash = (json: string): string => {
-		let h = 0;
-		for (let i = 0; i < json.length; i++) {
-			h = (Math.imul(31, h) + json.charCodeAt(i)) | 0;
-		}
-		return (h >>> 0).toString(16);
-	};
-
 	const syncFromServer = async () => {
 		const res = await fetch("/");
 		const jsn = await res.json();
-		console.log(jsn);
 		await db.clear("exercises");
-		jsn.forEach(async (exercise: Exercise) => {
+		for (const exercise of jsn) {
 			await db.add("exercises", {
+				id: exercise.id,
 				title: exercise.title,
 				workoutsString: exercise.workoutsString,
 			});
-		});
+		}
 		await db.put("meta", { id: 1, lastChanged: Date.now() });
 		synced.set(true);
-		loadExercises();
+		await loadExercises();
+	};
+
+	const syncRoutinesFromServer = async () => {
+		const res = await fetch("/routines");
+		const jsn: Routine[] = await res.json();
+		await db.clear("routines");
+		for (const routine of jsn) {
+			await db.add("routines", {
+				id: routine.id,
+				name: routine.name,
+				exerciseIds: routine.exerciseIds,
+			});
+		}
+		await db.put("meta", { id: 2, lastChanged: Date.now() });
+		await loadRoutines();
 	};
 
 	onMount(async () => {
 		db = await loadDB();
 		await loadExercises();
 		await loadRoutines();
-		if ($exercises.length === 0 && !data.hash) {
+
+		const meta = await getAll("meta");
+		const localTs = meta[0]?.lastChanged ?? 0;
+		const serverTs = data.lastModified?.getTime() ?? 0;
+		console.log(
+			"local:",
+			new Date(localTs).toLocaleString(),
+			"server:",
+			new Date(serverTs).toLocaleString(),
+		);
+
+		if ($exercises.length === 0 && serverTs === 0) {
 			toast.success("No Exercises stored locally and none on server");
-			return;
-		}
-		if ($exercises.length === 0) {
+		} else if ($exercises.length === 0) {
 			toast.success("No Exercises found locally. But Server has Exercises. Syncing from server...");
 			await syncFromServer();
-			return loadExercises();
+		} else if (serverTs > localTs) {
+			toast.success("Server version is newer. Syncing from server...");
+			await syncFromServer();
+		} else if (localTs > serverTs) {
+			await syncToServer();
 		}
-		const hash = createHash(JSON.stringify(exercises));
-		const meta = await getAll("meta");
-		if (data.hash !== hash) {
-			// @ts-ignore
-			if ((data.lastModified ?? new Date(0)) > new Date(meta[0]?.lastChanged)) {
-				toast.success("Server version is newer. Syncing from server...");
-				await syncFromServer();
-				return loadExercises();
-			}
+
+		const localRoutineTs = await getRoutineMetaTimestamp();
+		const serverRoutineTs = data.routineLastModified?.getTime() ?? 0;
+
+		if (serverRoutineTs > localRoutineTs) {
+			await syncRoutinesFromServer();
+		} else if (localRoutineTs > serverRoutineTs) {
+			await syncRoutinesToServer();
 		}
 	});
 

@@ -10,6 +10,10 @@
 	import Nav from "../Nav.svelte";
 	import H2 from "$lib/ui/H2.svelte";
 	import InfoText from "$lib/ui/InfoText.svelte";
+	import Input from "$lib/ui/Input.svelte";
+	import { toast } from "$lib/toast.svelte";
+
+	let { data } = $props();
 
 	let db: IDBPDatabase<DB>;
 
@@ -21,7 +25,17 @@
 		import: "",
 	});
 
+	let currentUsername = $state(data.username);
+	const account = $state({
+		username: data.username,
+		currentPassword: "",
+		newPassword: "",
+		confirmNewPassword: "",
+	});
+
 	let showDeletePopup = $state(false);
+	let showAccountPopup = $state(false);
+	let accountSaving = $state(false);
 
 	const importData = () => {
 		const exerciseStings = settings.import.split(/\n{2,}/);
@@ -45,6 +59,49 @@
 		}
 		goto("/login");
 	};
+
+	const saveAccount = async () => {
+		if (!account.currentPassword) {
+			return toast.error("Current password is required");
+		}
+		if (account.newPassword && account.newPassword.length < 8) {
+			return toast.error("New password must be at least 8 characters");
+		}
+		if (account.newPassword !== account.confirmNewPassword) {
+			return toast.error("New passwords don't match");
+		}
+		if (account.username === currentUsername && !account.newPassword) {
+			return toast.error("Nothing to update");
+		}
+
+		accountSaving = true;
+		try {
+			const res = await fetch("/settings", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					username: account.username,
+					currentPassword: account.currentPassword,
+					newPassword: account.newPassword || undefined,
+				}),
+			});
+
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				return toast.error(body.error ?? "Something went wrong");
+			}
+
+			const body = await res.json();
+			currentUsername = body.username;
+			account.currentPassword = "";
+			account.newPassword = "";
+			account.confirmNewPassword = "";
+			showAccountPopup = false;
+			toast.success("Account updated");
+		} finally {
+			accountSaving = false;
+		}
+	};
 </script>
 
 <main class="pt-24 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -64,6 +121,13 @@
 	<div class="flex flex-col gap-4">
 		<Card>
 			<H2>Account</H2>
+			<div class="flex items-center justify-between mb-3">
+				<div>
+					<p class="text-xs uppercase tracking-widest text-fg-alt m-0">Username</p>
+					<p class="text-base m-0 mt-1">{currentUsername}</p>
+				</div>
+			</div>
+			<Btn onclick={() => (showAccountPopup = true)} cl="cursor-pointer mb-2">Edit Account</Btn>
 			<Btn onclick={logout} cl="bg-muted cursor-pointer mt-0 text-white">Logout</Btn>
 		</Card>
 
@@ -99,6 +163,54 @@
 		>
 			Delete
 		</Btn>
+	</div>
+</Popup>
+
+<Popup title="Edit Account" bind:showPopup={showAccountPopup}>
+	<div class="flex flex-col gap-3">
+		<div>
+			<p class="text-xs uppercase tracking-widest text-fg-alt m-0 mb-1">Username</p>
+			<Input bind:value={account.username} placeholder="Username" type="text" />
+		</div>
+		<div>
+			<p class="text-xs uppercase tracking-widest text-fg-alt m-0 mb-1">Current Password</p>
+			<Input bind:value={account.currentPassword} placeholder="Current password" type="password" />
+		</div>
+		<div>
+			<p class="text-xs uppercase tracking-widest text-fg-alt m-0 mb-1">New Password</p>
+			<Input
+				bind:value={account.newPassword}
+				placeholder="New password (leave blank to keep)"
+				type="password"
+			/>
+		</div>
+		{#if account.newPassword}
+			<div>
+				<p class="text-xs uppercase tracking-widest text-fg-alt m-0 mb-1">Confirm New Password</p>
+				<Input
+					bind:value={account.confirmNewPassword}
+					placeholder="Confirm new password"
+					type="password"
+				/>
+			</div>
+		{/if}
+		<div class="flex gap-2 mt-1">
+			<Btn
+				onclick={() => {
+					showAccountPopup = false;
+					account.username = currentUsername;
+					account.currentPassword = "";
+					account.newPassword = "";
+					account.confirmNewPassword = "";
+				}}
+				cl="bg-muted cursor-pointer text-white"
+			>
+				Cancel
+			</Btn>
+			<Btn onclick={saveAccount} cl="cursor-pointer" disabled={accountSaving}>
+				{accountSaving ? "Saving..." : "Save"}
+			</Btn>
+		</div>
 	</div>
 </Popup>
 
