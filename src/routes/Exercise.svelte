@@ -10,41 +10,48 @@
 
 	let title = $state(exercise.title);
 	let workoutsString = $state(exercise.workoutsString);
+	let expanded = $state(false);
 
 	const save = () => saveExercise({ ...exercise, title, workoutsString });
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <Card>
-	<h2 class="text-base font-bold my-1 flex gap-2 items-center justify-between">
+	<div
+		onclick={() => (expanded = !expanded)}
+		class="cursor-pointer flex items-center justify-between"
+	>
+		<p class="text-lg font-semibold m-0">{title}</p>
+		<button
+			onclick={(e) => {
+				e.stopPropagation();
+				showPopup = !showPopup;
+			}}
+			class="i-heroicons-ellipsis-vertical-16-solid size-5 block shrink-0"
+		></button>
+	</div>
+	{#if expanded}
+		<textarea
+			spellcheck="false"
+			class="w-full bg-transparent text-foreground border-none outline-none text-1rem mt-2"
+			onchange={save}
+			bind:value={workoutsString}
+		></textarea>
+	{/if}
+	<Popup title="Edit Exercise" bind:showPopup>
 		<input
 			spellcheck="false"
 			bind:value={title}
 			onchange={save}
-			class="bg-transparent w-full text-current border-none text-lg font-semibold outline-none"
+			class="bg-transparent w-full text-current border-solid border-1 border-border-input rounded-lg text-lg font-semibold outline-none px-3 py-2 mt-2"
 		/>
-		<button
-			onclick={() => (showPopup = !showPopup)}
-			class="i-heroicons-ellipsis-vertical-16-solid size-5 block"
-		></button>
-	</h2>
-	<details>
-		<summary class="py-3 cursor-pointer text-sm font-semibold list-none color-fg-alt"
-			>Show...</summary
-		>
-		<textarea
-			spellcheck="false"
-			class="w-full bg-transparent text-foreground border-none outline-none text-1rem"
-			onchange={save}
-			bind:value={workoutsString}
-		></textarea>
-	</details>
-	<Popup title="Edit Exercise" bind:showPopup>
 		<Btn
 			onclick={() => {
 				deleteExercise(exercise);
 				loadExercises();
 			}}
-			cl="bg-destructive cursor-pointer"
+			cl="bg-destructive cursor-pointer mt-3"
 		>
 			Delete Exercise
 		</Btn>

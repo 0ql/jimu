@@ -37,5 +37,18 @@ sw.addEventListener("fetch", (event) => {
 
 	if (isAsset) {
 		event.respondWith(caches.match(event.request).then((r) => r ?? fetch(event.request)));
+		return;
+	}
+
+	if (event.request.mode === "navigate") {
+		event.respondWith(
+			fetch(event.request)
+				.then((response) => {
+					const clone = response.clone();
+					caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+					return response;
+				})
+				.catch(() => caches.match(event.request).then((r) => r ?? caches.match("/")!)),
+		);
 	}
 });

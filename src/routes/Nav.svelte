@@ -44,6 +44,12 @@
 			<i class="i-tabler-list-check block size-6"></i>
 		</a>
 		<a
+			href="/sessions"
+			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
+		>
+			<i class="i-tabler-history block size-6"></i>
+		</a>
+		<a
 			href="/analytics"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
