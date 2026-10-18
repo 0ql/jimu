@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { IDBPDatabase } from "idb";
-	import { onMount } from "svelte";
+	import { onMount, untrack } from "svelte";
 	import { clearExersises, loadDB, type DB } from "../idb";
 	import { goto } from "$app/navigation";
 	import Card from "$lib/ui/Card.svelte";
@@ -25,9 +25,9 @@
 		import: "",
 	});
 
-	let currentUsername = $state(data.username);
+	let currentUsername = $state(untrack(() => data.username));
 	const account = $state({
-		username: data.username,
+		username: untrack(() => data.username),
 		currentPassword: "",
 		newPassword: "",
 		confirmNewPassword: "",

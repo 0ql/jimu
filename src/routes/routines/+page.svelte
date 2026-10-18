@@ -77,6 +77,7 @@
 					</div>
 					<button
 						onclick={() => deleteRoutine(routine)}
+						aria-label="Delete routine"
 						class="border-none bg-transparent cursor-pointer"
 					>
 						<i class="block i-tabler-trash size-5 bg-destructive"></i>

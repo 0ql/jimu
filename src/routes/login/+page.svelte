@@ -41,35 +41,23 @@
 	<section
 		class="relative w-full max-w-sm bg-bg-alt border-solid border-1 border-muted rounded-xl px-6 py-6 overflow-hidden"
 	>
-		<p class="text-xs uppercase tracking-widest text-fg-alt mb-4 m-0">
-			Sign in to continue
-		</p>
-		<Input
-			placeholder="Username"
-			bind:value={credentials.username}
-			type="text"
-		/>
+		<p class="text-xs uppercase tracking-widest text-fg-alt mb-4 m-0">Sign in to continue</p>
+		<Input placeholder="Username" bind:value={credentials.username} type="text" />
 		<Input
 			placeholder="Password"
 			bind:value={credentials.password}
 			type="password"
 			cl="mt-3"
-			onkeydown={(e) => e.key === "Enter" && login()}
+			onkeydown={(e: KeyboardEvent) => e.key === "Enter" && login()}
 		/>
 
 		{#if error}
-			<p
-				class="text-xs text-destructive mt-3 m-0 text-center uppercase tracking-widest font-bold"
-			>
+			<p class="text-xs text-destructive mt-3 m-0 text-center uppercase tracking-widest font-bold">
 				{error}
 			</p>
 		{/if}
 
-		<Btn
-			onclick={login}
-			cl="bg-destructive cursor-pointer mt-4 text-white"
-			disabled={loading}
-		>
+		<Btn onclick={login} cl="bg-destructive cursor-pointer mt-4 text-white" disabled={loading}>
 			{loading ? "Logging in..." : "Login"}
 		</Btn>
 		<Anchor href="/signup" cl="mt-2">No account? Sign up</Anchor>

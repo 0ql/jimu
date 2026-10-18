@@ -159,7 +159,7 @@
 		placeholder="Exercise name"
 		bind:value={newTitle}
 		cl="text-xl"
-		onkeydown={(e) =>
+		onkeydown={(e: KeyboardEvent) =>
 			e.key === "Enter" &&
 			newTitle.trim() &&
 			(addExercise(newTitle.trim()), (newTitle = ""), (showAddPopup = false))}

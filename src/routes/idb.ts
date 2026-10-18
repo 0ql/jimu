@@ -182,7 +182,7 @@ const removeExerciseFromAllRoutines = async (exerciseId: number) => {
 	}
 };
 
-export const getAll = async (storeName: "meta" | "exercises") => {
+export const getAll = async <S extends "meta" | "exercises">(storeName: S) => {
 	return await idb.getAll(storeName);
 };
 

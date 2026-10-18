@@ -1,5 +1,5 @@
 <script lang="ts">
-	let { cl = "", ...rest } = $props();
+	let { cl = "", children, ...rest } = $props();
 </script>
 
-<p {...rest} class="text-sm text-fg-alt m-0 {cl}"><slot /></p>
+<p {...rest} class="text-sm text-fg-alt m-0 {cl}">{@render children?.()}</p>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from "svelte";
 	import { deleteExercise, type Exercise, loadExercises, saveExercise } from "./idb";
 
 	import Btn from "$lib/ui/Button.svelte";
@@ -8,8 +9,8 @@
 	let { exercise }: { exercise: Exercise } = $props();
 	let showPopup = $state(false);
 
-	let title = $state(exercise.title);
-	let workoutsString = $state(exercise.workoutsString);
+	let title = $state(untrack(() => exercise.title));
+	let workoutsString = $state(untrack(() => exercise.workoutsString));
 	let expanded = $state(false);
 
 	const save = () => saveExercise({ ...exercise, title, workoutsString });
@@ -28,6 +29,7 @@
 				e.stopPropagation();
 				showPopup = !showPopup;
 			}}
+			aria-label="Edit exercise"
 			class="i-heroicons-ellipsis-vertical-16-solid size-5 block shrink-0"
 		></button>
 	</div>

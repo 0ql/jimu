@@ -13,7 +13,7 @@
 	import H2 from "$lib/ui/H2.svelte";
 	import Select from "$lib/ui/Select.svelte";
 
-	let selection: number;
+	let selection: number | undefined = $state();
 	let selectedExercise: Exercise | null = $state(null);
 
 	onMount(async () => {

@@ -33,30 +33,35 @@
 		</section>
 		<a
 			href="/"
+			aria-label="Exercises"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			<i class="i-tabler-list block size-6"></i>
 		</a>
 		<a
 			href="/routines"
+			aria-label="Routines"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			<i class="i-tabler-list-check block size-6"></i>
 		</a>
 		<a
 			href="/sessions"
+			aria-label="Sessions"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			<i class="i-tabler-history block size-6"></i>
 		</a>
 		<a
 			href="/analytics"
+			aria-label="Analytics"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			<i class="i-tabler-device-analytics block size-6"></i>
 		</a>
 		<button
 			onclick={syncToServer}
+			aria-label="Sync"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			{#if $synced}
@@ -67,6 +72,7 @@
 		</button>
 		<a
 			href="/settings"
+			aria-label="Settings"
 			class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center"
 		>
 			<i class="i-tabler-settings block size-6"></i>
@@ -74,6 +80,7 @@
 		{#if onadd}
 			<button
 				onclick={onadd}
+				aria-label="Add"
 				class="cursor-pointer border-solid border-1 border-border-input bg-bg rounded-lg size-10 flex justify-center items-center ml-auto"
 			>
 				<i class="i-tabler-plus block size-6"></i>

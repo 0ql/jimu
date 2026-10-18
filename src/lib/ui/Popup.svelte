@@ -28,6 +28,7 @@
 	<button
 		transition:fade={{ duration: 200 }}
 		onclick={() => (showPopup = false)}
+		aria-label="Close popup"
 		class="fixed inset-0 h-[100dvh] w-screen border-none bg-black bg-opacity-60 z-40 cursor-pointer"
 	></button>
 
@@ -42,7 +43,11 @@
 		<div class="flex justify-between items-center mb-2">
 			<!-- <PageTitle cl={isMobile ? "my-4" : "text-sm"}>{title}</PageTitle> -->
 			<h1 class="font-bold m-0 text-xl">{title}</h1>
-			<button class="border-none bg-transparent cursor-pointer" onclick={() => (showPopup = false)}>
+			<button
+				class="border-none bg-transparent cursor-pointer"
+				aria-label="Close"
+				onclick={() => (showPopup = false)}
+			>
 				<i class="block i-heroicons-x-mark-16-solid size-8"></i>
 			</button>
 		</div>
