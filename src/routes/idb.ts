@@ -5,12 +5,27 @@ export type Exercise = {
 	id?: number;
 	title: string;
 	workoutsString: string;
+	/** Machine setup, e.g. "Sitz 3, Rolle 2". */
+	note?: string;
 };
 
 export type Routine = {
 	id?: number;
 	name: string;
 	exerciseIds: number[];
+};
+
+/**
+ * Sync bookkeeping per store (id 1 = exercises, id 2 = routines).
+ * `lastChanged` is the server's lastModified of the version this device last synced with,
+ * so it is only ever compared with other server timestamps. `dirty` means there are local
+ * edits the server has not received yet. Records written before the flag existed have no
+ * `dirty` and hold a client-clock time instead.
+ */
+export type SyncMeta = {
+	id?: number;
+	lastChanged: number;
+	dirty?: boolean;
 };
 
 export interface DB extends DBSchema {
@@ -20,10 +35,7 @@ export interface DB extends DBSchema {
 	};
 	meta: {
 		key: number;
-		value: {
-			id?: number;
-			lastChanged: number;
-		};
+		value: SyncMeta;
 	};
 	routines: {
 		key: number;
@@ -31,8 +43,43 @@ export interface DB extends DBSchema {
 	};
 }
 
+export const EXERCISES_META = 1;
+export const ROUTINES_META = 2;
+
 export let idb: IDBPDatabase<DB>;
 export const synced = writable(true);
+
+export const getSyncMeta = (id: number) => idb.get("meta", id);
+
+export const markSynced = (id: number, lastChanged: number) =>
+	idb.put("meta", { id, lastChanged, dirty: false });
+
+const markDirty = async (id: number) => {
+	const meta = await idb.get("meta", id);
+	await idb.put("meta", { lastChanged: 0, ...meta, id, dirty: true });
+};
+
+export type SyncPlan = "push" | "pull" | "conflict" | "none";
+
+/** What to do on startup, given this device's bookkeeping and the server's lastModified. */
+export const planSync = (meta: SyncMeta | undefined, serverTs: number): SyncPlan => {
+	if (!meta) return serverTs ? "pull" : "none";
+	// Pre-flag record: decide one last time by comparing clocks; the sync then rewrites it.
+	if (meta.dirty === undefined) {
+		if (serverTs > meta.lastChanged) return "pull";
+		if (meta.lastChanged > serverTs) return "push";
+		return "none";
+	}
+	if (meta.dirty) return serverTs > meta.lastChanged ? "conflict" : "push";
+	if (serverTs > meta.lastChanged) return "pull";
+	// The server is behind the version we synced with (e.g. restored database): restore it.
+	if (serverTs < meta.lastChanged) return "push";
+	return "none";
+};
+
+// Edits made while an upload is in flight must keep the store dirty.
+let exerciseEdits = 0;
+let routineEdits = 0;
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -41,11 +88,16 @@ export const syncToServer = async () => {
 		clearTimeout(syncTimer);
 		syncTimer = null;
 	}
+	const editsAtStart = exerciseEdits;
 	const exercises = await idb.getAll("exercises");
 	const res = await fetch("/", { method: "POST", body: JSON.stringify(exercises) });
-	if (res.ok) {
+	if (!res.ok) return;
+	const { lastModified } = await res.json();
+	if (exerciseEdits === editsAtStart) {
+		await markSynced(EXERCISES_META, lastModified);
 		synced.set(true);
-		await idb.put("meta", { id: 1, lastChanged: Date.now() });
+	} else {
+		await idb.put("meta", { id: EXERCISES_META, lastChanged: lastModified, dirty: true });
 	}
 };
 
@@ -61,8 +113,13 @@ export const syncRoutinesToServer = async () => {
 		clearTimeout(routineSyncTimer);
 		routineSyncTimer = null;
 	}
+	const editsAtStart = routineEdits;
 	const all = await idb.getAll("routines");
-	await fetch("/routines", { method: "POST", body: JSON.stringify(all) });
+	const res = await fetch("/routines", { method: "POST", body: JSON.stringify(all) });
+	if (!res.ok) return;
+	const { lastModified } = await res.json();
+	if (routineEdits === editsAtStart) await markSynced(ROUTINES_META, lastModified);
+	else await idb.put("meta", { id: ROUTINES_META, lastChanged: lastModified, dirty: true });
 };
 
 const scheduleRoutineSync = () => {
@@ -74,11 +131,21 @@ export const exercises: Writable<Exercise[]> = writable([]);
 export const routines: Writable<Routine[]> = writable([]);
 
 const updateMeta = async () => {
-	await idb.put("meta", { id: 1, lastChanged: Date.now() });
+	exerciseEdits++;
+	await markDirty(EXERCISES_META);
 };
 
 const updateRoutineMeta = async () => {
-	await idb.put("meta", { id: 2, lastChanged: Date.now() });
+	routineEdits++;
+	await markDirty(ROUTINES_META);
+};
+
+/** For bulk writes made outside this module (e.g. the settings import). */
+export const markExercisesChanged = async () => {
+	synced.set(false);
+	await updateMeta();
+	await loadExercises();
+	scheduleSync();
 };
 
 export const loadDB = async () => {
@@ -111,17 +178,19 @@ export const loadRoutines = async () => {
 	routines.set(r);
 };
 
-export const addExercise = async (title: string) => {
+export const addExercise = async (title: string, workoutsString = "") => {
 	synced.set(false);
-	await idb.add("exercises", { title, workoutsString: "" });
+	const id = await idb.add("exercises", { title, workoutsString });
 	await updateMeta();
 	await loadExercises();
 	scheduleSync();
+	return Number(id);
 };
 
 export const saveExercise = async (exercise: Exercise) => {
 	synced.set(false);
 	await idb.put("exercises", { ...exercise });
+	exercises.update((list) => list.map((e) => (e.id === exercise.id ? { ...exercise } : e)));
 	await updateMeta();
 	scheduleSync();
 };
@@ -129,6 +198,7 @@ export const saveExercise = async (exercise: Exercise) => {
 export const clearExersises = async () => {
 	synced.set(false);
 	await idb.clear("exercises");
+	await updateMeta();
 	scheduleSync();
 };
 
@@ -137,6 +207,7 @@ export const deleteExercise = async (exercise: Exercise) => {
 	if (!exercise.id) return;
 	// @ts-ignore
 	await idb.delete("exercises", exercise.id);
+	await updateMeta();
 	await removeExerciseFromAllRoutines(exercise.id);
 	scheduleSync();
 };
@@ -184,9 +255,4 @@ const removeExerciseFromAllRoutines = async (exerciseId: number) => {
 
 export const getAll = async <S extends "meta" | "exercises">(storeName: S) => {
 	return await idb.getAll(storeName);
-};
-
-export const getRoutineMetaTimestamp = async (): Promise<number> => {
-	const entry = await idb.get("meta", 2);
-	return entry?.lastChanged ?? 0;
 };

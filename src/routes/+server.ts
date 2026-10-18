@@ -9,11 +9,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		uuid: locals.user.uuid,
 		workoutsJsn: jsn,
 	};
-	await db.insert(exercises).values(values).onConflictDoUpdate({
-		target: exercises.uuid,
-		set: values,
-	});
-	return new Response();
+	const [row] = await db
+		.insert(exercises)
+		.values(values)
+		.onConflictDoUpdate({ target: exercises.uuid, set: values })
+		.returning({ lastModified: exercises.lastModified });
+	// The client stores this as the version it is in sync with, so it never compares clocks.
+	return Response.json({ lastModified: row.lastModified?.getTime() ?? 0 });
 };
 
 export const GET: RequestHandler = async ({ locals }) => {

@@ -62,7 +62,7 @@
 	};
 </script>
 
-<main class="px-4 pt-24 pb-8 max-w-5xl mx-auto">
+<main class="px-4 pt-[calc(var(--nav-h,6rem)+1rem)] pb-8 max-w-5xl mx-auto">
 	<PageTitle cl="mb-4">Routines</PageTitle>
 
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

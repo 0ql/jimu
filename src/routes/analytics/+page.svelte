@@ -6,6 +6,7 @@
 	import AxisY from "./_components/AxisY.svelte";
 	import { exercises, loadExercises } from "../idb";
 	import { onMount } from "svelte";
+	import { page } from "$app/state";
 	import { type Exercise } from "../idb";
 	import Nav from "../Nav.svelte";
 	import Card from "$lib/ui/Card.svelte";
@@ -18,6 +19,11 @@
 
 	onMount(async () => {
 		await loadExercises();
+		const id = Number(page.url.searchParams.get("exercise"));
+		if (id && $exercises.some((exercise) => exercise.id === id)) {
+			selection = id;
+			showExercise();
+		}
 	});
 
 	let points: any = $state([]);
@@ -104,7 +110,7 @@
 	});
 </script>
 
-<main class="pt-24 pb-8 mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+<main class="pt-[calc(var(--nav-h,6rem)+1rem)] pb-8 mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
 	<PageTitle cl="mb-4 col-span-full">Analytics</PageTitle>
 
 	<Card cl="col-span-full md:col-span-1">

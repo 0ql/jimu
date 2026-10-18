@@ -72,7 +72,7 @@
 		});
 </script>
 
-<main class="px-4 pt-24 pb-8 max-w-5xl mx-auto">
+<main class="px-4 pt-[calc(var(--nav-h,6rem)+1rem)] pb-8 max-w-5xl mx-auto">
 	<PageTitle cl="mb-4">Sessions</PageTitle>
 
 	{#if sessions.length === 0}

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap");
 
 :root {
 	/* ── Basic ── */
@@ -34,7 +34,7 @@
 	/* --focus-color: #FFFFFF; */
 	/* --depth: rgba(255, 255, 255, 0.03); */
 
-	--background: #0d0d0d;
+	--background: #0d0d0e;
 	--background-alt: #141414;
 	--foreground: #f2f2f2;
 	--foreground-alt: #b3b3b3;
@@ -61,11 +61,22 @@
 	--shadow-btn: 0px 1px 0px 1px #0003;
 	--shadow-card: 0px 2px 0px 1px #0006;
 	--shadow-date-field-focus: 0px 0px 0px 3px #f4f4f51a;
+
+	/* ── Logbook ── */
+	--signal: #d7f55a;
+	--surface: #17171a;
+	--surface-2: #1e1e22;
+	--surface-3: #232328;
+	--hairline: #26262b;
+	--subtle: #9a9aa2;
+	--faint: #6e6e77;
+	--drop: #ffb088;
+	--drop-bg: rgba(255, 138, 76, 0.12);
+	--drop-border: rgba(255, 138, 76, 0.45);
 }
 
 * {
-	font-family: "Inter", sans-serif;
-	font-optical-sizing: auto;
+	font-family: "Barlow", system-ui, sans-serif;
 	font-weight: 400;
 	font-style: normal;
 	box-sizing: border-box;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { IDBPDatabase } from "idb";
 	import { onMount, untrack } from "svelte";
-	import { clearExersises, loadDB, type DB } from "../idb";
+	import { clearExersises, loadDB, markExercisesChanged, type DB } from "../idb";
 	import { goto } from "$app/navigation";
 	import Card from "$lib/ui/Card.svelte";
 	import Btn from "$lib/ui/Button.svelte";
@@ -37,17 +37,18 @@
 	let showAccountPopup = $state(false);
 	let accountSaving = $state(false);
 
-	const importData = () => {
+	const importData = async () => {
 		const exerciseStings = settings.import.split(/\n{2,}/);
 		const exerciseArrays = exerciseStings.map((el) => el.split(/\n/));
-		exerciseArrays.forEach((exercise) => {
+		for (const exercise of exerciseArrays) {
 			const exerciseTitle = exercise[0];
 			const workoutsString = exercise.slice(1).join("\n");
-			db.add("exercises", {
+			await db.add("exercises", {
 				title: exerciseTitle,
 				workoutsString,
 			});
-		});
+		}
+		await markExercisesChanged();
 	};
 
 	const logout = async () => {
@@ -104,7 +105,7 @@
 	};
 </script>
 
-<main class="pt-24 grid grid-cols-1 md:grid-cols-3 gap-4">
+<main class="pt-[calc(var(--nav-h,6rem)+1rem)] grid grid-cols-1 md:grid-cols-3 gap-4">
 	<PageTitle cl="mb-3 col-span-full">Settings</PageTitle>
 
 	<Card cl="md:col-span-2">

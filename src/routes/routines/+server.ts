@@ -9,11 +9,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		uuid: locals.user.uuid,
 		routinesJsn: jsn,
 	};
-	await db
+	const [row] = await db
 		.insert(routines)
 		.values(values)
-		.onConflictDoUpdate({ target: routines.uuid, set: values });
-	return new Response();
+		.onConflictDoUpdate({ target: routines.uuid, set: values })
+		.returning({ lastModified: routines.lastModified });
+	return Response.json({ lastModified: row.lastModified?.getTime() ?? 0 });
 };
 
 export const GET: RequestHandler = async ({ locals }) => {

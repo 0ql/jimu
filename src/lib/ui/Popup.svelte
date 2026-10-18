@@ -34,21 +34,26 @@
 
 	<section
 		transition:popupTransition
-		class="fixed z-40 bg-bg-alt border-solid border-1 border-muted box-border
+		class="fixed z-40 bg-surface border-solid border-1 border-[#2a2a30] box-border overflow-y-auto
 			{isMobile
-			? 'left-0 bottom-0 rounded-t-xl w-full h-60vh px-8 pt-5 border-b-none'
-			: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-xl px-8 py-6'}"
-		style={isMobile ? "padding-bottom: calc(1.25rem + env(safe-area-inset-bottom))" : ""}
+			? 'left-0 bottom-0 rounded-t-[22px] w-full max-h-[85dvh] px-5 pt-2 border-b-none'
+			: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md max-h-[85dvh] rounded-2xl px-6 py-5'}"
+		style={isMobile ? "padding-bottom: calc(1.75rem + env(safe-area-inset-bottom))" : ""}
 	>
+		{#if isMobile}
+			<div class="flex justify-center pb-2">
+				<span class="w-10 h-[5px] rounded-full bg-[#3a3a41]"></span>
+			</div>
+		{/if}
 		<div class="flex justify-between items-center mb-2">
 			<!-- <PageTitle cl={isMobile ? "my-4" : "text-sm"}>{title}</PageTitle> -->
-			<h1 class="font-bold m-0 text-xl">{title}</h1>
+			<h1 class="font-cond font-bold m-0 text-[26px]">{title}</h1>
 			<button
 				class="border-none bg-transparent cursor-pointer"
 				aria-label="Close"
 				onclick={() => (showPopup = false)}
 			>
-				<i class="block i-heroicons-x-mark-16-solid size-8"></i>
+				<i class="block i-heroicons-x-mark-16-solid size-7 text-subtle"></i>
 			</button>
 		</div>
 		{@render children?.()}

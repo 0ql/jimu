@@ -12,7 +12,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="px-6">
+<div class="px-4">
 	{@render children()}
 </div>
 <Toasts />
