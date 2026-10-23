@@ -30,14 +30,17 @@
 	import SearchBar from "./SearchBar.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
 	import { toast } from "$lib/toast.svelte";
-	import Input from "$lib/ui/Input.svelte";
-	import Btn from "$lib/ui/Button.svelte";
 
 	let searchString: string = $state("");
 	let db: IDBPDatabase<DB>;
 	let { data }: PageProps = $props();
 	let showAddPopup = $state(false);
 	let newTitle = $state("");
+	let newNote = $state("");
+	// Opened from "Create “…”" in search: the exercise starts with today's line ready to type into.
+	let newFromSearch = $state(false);
+	let nameInput: HTMLInputElement | undefined = $state();
+	let noteInput: HTMLInputElement | undefined = $state();
 	let selectedRoutineId: number | null = $state(null);
 	// Rows copy their exercise into local state, so remount them after a pull from the server.
 	let pullCount = $state(0);
@@ -232,13 +235,24 @@
 		return { names, volume };
 	});
 
-	const create = async (title: string, workoutsString = "") => {
+	/** Opens the new-exercise prompt; a name from search is prefilled so only the setup is left. */
+	const openAdd = async (name = "") => {
+		newTitle = name.trim();
+		newNote = "";
+		newFromSearch = !!newTitle;
+		showAddPopup = true;
+		await tick();
+		(newTitle ? noteInput : nameInput)?.focus();
+	};
+
+	const create = async (title: string, workoutsString = "", note = "") => {
 		if (!title.trim()) return;
-		const id = await addExercise(title.trim(), workoutsString);
+		const id = await addExercise(title.trim(), workoutsString, note);
 		if (selectedRoutineId !== null && activeRoutine) {
 			await saveRoutine({ ...activeRoutine, exerciseIds: [...activeRoutine.exerciseIds, id] });
 		}
 		newTitle = "";
+		newNote = "";
 		showAddPopup = false;
 		openId = id;
 		if (wide) {
@@ -248,7 +262,8 @@
 		}
 	};
 
-	const createFromSearch = () => create(searchString, `${dateStamp()} `);
+	const createFromSearch = () => openAdd(searchString);
+	const submitNew = () => create(newTitle, newFromSearch ? `${dateStamp()} ` : "", newNote);
 </script>
 
 <svelte:window onkeydown={onWindowKey} />
@@ -418,24 +433,58 @@
 	</main>
 {/if}
 
-<Popup title="New Exercise" bind:showPopup={showAddPopup}>
-	<Input
-		placeholder="Exercise name"
-		bind:value={newTitle}
-		cl="text-xl"
-		onkeydown={(e: KeyboardEvent) => e.key === "Enter" && create(newTitle)}
-	/>
-	<Btn cl="cursor-pointer mt-3" onclick={() => create(newTitle)}>Add</Btn>
+<Popup title="New exercise" bind:showPopup={showAddPopup}>
+	<form
+		class="flex flex-col gap-4 pt-1"
+		onsubmit={(e) => {
+			e.preventDefault();
+			submitNew();
+		}}
+	>
+		<div class="flex flex-col gap-1.5">
+			<label for="new-name" class="text-xs text-subtle">Name</label>
+			<input
+				id="new-name"
+				bind:this={nameInput}
+				bind:value={newTitle}
+				spellcheck="false"
+				autocomplete="off"
+				placeholder="Bizeps Kabel curl"
+				class="h-[50px] w-full rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 text-[17px] font-semibold outline-none focus:border-signal placeholder:text-[#5a5a62] placeholder:font-normal"
+			/>
+		</div>
+		<div class="flex flex-col gap-1.5">
+			<label for="new-note" class="text-xs text-subtle"
+				>Machine setup <span class="text-faint">· optional</span></label
+			>
+			<input
+				id="new-note"
+				bind:this={noteInput}
+				bind:value={newNote}
+				spellcheck="false"
+				autocomplete="off"
+				placeholder="Sitz 3, Rolle 2"
+				class="h-[50px] w-full rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 font-mono text-[15px] outline-none focus:border-signal placeholder:text-[#5a5a62]"
+			/>
+		</div>
+		<button
+			type="submit"
+			disabled={!newTitle.trim()}
+			class="h-12 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-[#111] disabled:opacity-40 disabled:cursor-default"
+		>
+			Create exercise
+		</button>
+	</form>
 </Popup>
 
-<Nav onadd={() => (showAddPopup = true)}>
+<Nav onadd={() => openAdd()}>
 	{#if !wide}
 		<div class="flex gap-2">
 			<div class="flex-1 min-w-0">
 				<SearchBar bind:value={searchString} />
 			</div>
 			<button
-				onclick={() => (showAddPopup = true)}
+				onclick={() => openAdd()}
 				aria-label="New exercise"
 				class="size-12 shrink-0 rounded-xl border-none bg-signal cursor-pointer flex items-center justify-center"
 			>

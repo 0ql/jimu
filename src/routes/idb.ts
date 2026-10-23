@@ -201,9 +201,13 @@ export const loadRoutines = async () => {
 	routines.set(r);
 };
 
-export const addExercise = async (title: string, workoutsString = "") => {
+export const addExercise = async (title: string, workoutsString = "", note = "") => {
 	synced.set(false);
-	const id = await idb.add("exercises", { title, workoutsString });
+	const id = await idb.add("exercises", {
+		title,
+		workoutsString,
+		...(note.trim() ? { note: note.trim() } : {}),
+	});
 	await updateMeta();
 	await loadExercises();
 	scheduleSync();
