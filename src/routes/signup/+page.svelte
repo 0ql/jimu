@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
-	import Input from "$lib/ui/Input.svelte";
-	import Btn from "$lib/ui/Button.svelte";
-	import Anchor from "$lib/ui/Anchor.svelte";
-	import PageTitle from "$lib/ui/PageTitle.svelte";
+	import AuthShell from "../AuthShell.svelte";
+	import AuthField from "../AuthField.svelte";
 
 	const credentials = $state({
 		username: "",
@@ -54,32 +52,41 @@
 	};
 </script>
 
-<main class="flex flex-col justify-center items-center w-full min-h-screen gap-8 px-4">
-	<PageTitle cl="text-7xl">JIMU</PageTitle>
+<svelte:head><title>Create account · jimu</title></svelte:head>
 
-	<section
-		class="w-full max-w-sm bg-bg-alt border-solid border-1 border-muted rounded-xl px-6 py-6"
+<AuthShell title="Create account" {error} onsubmit={signup}>
+	<AuthField
+		id="username"
+		label="Username"
+		bind:value={credentials.username}
+		autocomplete="username"
+		hint="3–30 characters: letters, numbers, _ and -"
+	/>
+	<AuthField
+		id="password"
+		label="Password"
+		type="password"
+		bind:value={credentials.password1}
+		autocomplete="new-password"
+		hint="At least 8 characters"
+	/>
+	<AuthField
+		id="password-confirm"
+		label="Confirm password"
+		type="password"
+		bind:value={credentials.password2}
+		autocomplete="new-password"
+	/>
+	<button
+		type="submit"
+		disabled={loading}
+		class="h-12 mt-1 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-[#111] disabled:opacity-60 disabled:cursor-default"
 	>
-		<p class="text-xs uppercase tracking-widest text-fg-alt mb-4 m-0">Create an account</p>
-		<Input placeholder="Username" bind:value={credentials.username} type="text" />
-		<Input placeholder="Password" bind:value={credentials.password1} type="password" cl="mt-3" />
-		<Input
-			placeholder="Confirm password"
-			bind:value={credentials.password2}
-			type="password"
-			cl="mt-3"
-			onkeydown={(e: KeyboardEvent) => e.key === "Enter" && signup()}
-		/>
-
-		{#if error}
-			<p class="text-xs text-destructive mt-3 m-0 text-center uppercase tracking-widest font-bold">
-				{error}
-			</p>
-		{/if}
-
-		<Btn onclick={signup} cl="bg-destructive cursor-pointer mt-4 text-white" disabled={loading}>
-			{loading ? "Signing up..." : "Sign Up"}
-		</Btn>
-		<Anchor href="/login" cl="mt-2">Already have an account? Login</Anchor>
-	</section>
-</main>
+		{loading ? "Creating account…" : "Create account"}
+	</button>
+	{#snippet footer()}
+		Already have an account? <a href="/login" class="font-semibold no-underline text-signal"
+			>Log in</a
+		>
+	{/snippet}
+</AuthShell>

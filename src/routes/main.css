@@ -75,8 +75,13 @@
 	--drop-border: rgba(255, 138, 76, 0.45);
 }
 
-* {
+html {
 	font-family: "Poppins", system-ui, sans-serif;
+}
+
+* {
+	/* Inherit, so text inside a font-mono (or font-display) parent keeps that font. */
+	font-family: inherit;
 	font-weight: 400;
 	font-style: normal;
 	box-sizing: border-box;

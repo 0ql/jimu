@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
-	import Anchor from "$lib/ui/Anchor.svelte";
-	import Btn from "$lib/ui/Button.svelte";
-	import Input from "$lib/ui/Input.svelte";
-	import PageTitle from "$lib/ui/PageTitle.svelte";
+	import AuthShell from "../AuthShell.svelte";
+	import AuthField from "../AuthField.svelte";
 
 	const credentials = $state({
 		username: "",
@@ -24,7 +22,7 @@
 			});
 
 			if (res.status !== 200) {
-				error = "Invalid username or password";
+				error = "That username and password don't match.";
 				return;
 			}
 			goto("/");
@@ -34,33 +32,30 @@
 	};
 </script>
 
-<main
-	class="flex flex-col justify-center items-center w-full min-h-screen gap-8 px-4 relative overflow-hidden"
->
-	<PageTitle cl="text-7xl">JIMU</PageTitle>
+<svelte:head><title>Log in · jimu</title></svelte:head>
 
-	<section
-		class="relative w-full max-w-sm bg-bg-alt border-solid border-1 border-muted rounded-xl px-6 py-6 overflow-hidden"
+<AuthShell title="Log in" {error} onsubmit={login}>
+	<AuthField
+		id="username"
+		label="Username"
+		bind:value={credentials.username}
+		autocomplete="username"
+	/>
+	<AuthField
+		id="password"
+		label="Password"
+		type="password"
+		bind:value={credentials.password}
+		autocomplete="current-password"
+	/>
+	<button
+		type="submit"
+		disabled={loading}
+		class="h-12 mt-1 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-[#111] disabled:opacity-60 disabled:cursor-default"
 	>
-		<p class="text-xs uppercase tracking-widest text-fg-alt mb-4 m-0">Sign in to continue</p>
-		<Input placeholder="Username" bind:value={credentials.username} type="text" />
-		<Input
-			placeholder="Password"
-			bind:value={credentials.password}
-			type="password"
-			cl="mt-3"
-			onkeydown={(e: KeyboardEvent) => e.key === "Enter" && login()}
-		/>
-
-		{#if error}
-			<p class="text-xs text-destructive mt-3 m-0 text-center uppercase tracking-widest font-bold">
-				{error}
-			</p>
-		{/if}
-
-		<Btn onclick={login} cl="bg-destructive cursor-pointer mt-4 text-white" disabled={loading}>
-			{loading ? "Logging in..." : "Login"}
-		</Btn>
-		<Anchor href="/signup" cl="mt-2">No account? Sign up</Anchor>
-	</section>
-</main>
+		{loading ? "Logging in…" : "Log in"}
+	</button>
+	{#snippet footer()}
+		No account yet? <a href="/signup" class="font-semibold no-underline text-signal">Create one</a>
+	{/snippet}
+</AuthShell>
