@@ -21,10 +21,18 @@
 	});
 	const weekday = $derived(now.toLocaleDateString("en-US", { weekday: "long" }));
 
-	// Pages offset their content by the nav's real height via --nav-h.
-	let height = $state(0);
+	// Pages offset their content by the nav's real height (border included) via --nav-h.
+	// A ResizeObserver catches every change, e.g. the search row leaving when the layout goes wide.
+	let navEl: HTMLElement | undefined = $state();
 	$effect(() => {
-		document.documentElement.style.setProperty("--nav-h", `${height}px`);
+		if (!navEl) return;
+		const el = navEl;
+		const update = () =>
+			document.documentElement.style.setProperty("--nav-h", `${el.offsetHeight}px`);
+		const observer = new ResizeObserver(update);
+		observer.observe(el);
+		update();
+		return () => observer.disconnect();
 	});
 
 	const links = [
@@ -33,10 +41,16 @@
 		{ href: "/analytics", label: "Analytics", icon: "i-tabler-chart-bar" },
 		{ href: "/settings", label: "Settings", icon: "i-tabler-adjustments-horizontal" },
 	];
+	// Admins get one more link; it is the same on every tab, so nothing shifts.
+	const navLinks = $derived(
+		page.data.isAdmin
+			? [...links, { href: "/admin", label: "Admin", icon: "i-tabler-shield-half" }]
+			: links,
+	);
 </script>
 
 <nav
-	bind:clientHeight={height}
+	bind:this={navEl}
 	class="fixed left-0 right-0 top-0 z-30 px-4 lg:px-8 pt-5 pb-3 lg:pb-3.5 bg-bg border-b-solid border-b-1 border-b-[#1a1a1d] flex flex-col gap-3"
 	style="padding-top: calc(1.25rem + env(safe-area-inset-top))"
 >
@@ -78,7 +92,7 @@
 			>
 				<i class="i-tabler-barbell block size-[18px]"></i>Exercises
 			</a>
-			{#each links as link}
+			{#each navLinks as link}
 				{@const active = page.url.pathname.startsWith(link.href)}
 				<a
 					href={link.href}

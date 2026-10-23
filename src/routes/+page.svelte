@@ -309,7 +309,7 @@
 {#if wide}
 	<main
 		class="max-w-[1408px] mx-auto px-4 flex gap-6 items-start"
-		style="padding-top: calc(var(--nav-h, 5rem) + 1.5rem); padding-bottom: 2rem"
+		style="padding-top: calc(var(--nav-h, 5rem) + 1.5rem); padding-bottom: 1.5rem"
 	>
 		<aside
 			aria-label="Exercises"

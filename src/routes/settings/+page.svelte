@@ -11,6 +11,7 @@
 		markExercisesChanged,
 		ROUTINES_META,
 		synced,
+		syncAndClearLocalData,
 		syncRoutinesToServer,
 		syncToServer,
 		type DB,
@@ -105,13 +106,15 @@
 	};
 
 	const logout = async () => {
+		// Upload pending edits while still signed in, then leave nothing behind for the next account.
+		await syncAndClearLocalData();
 		const res = await fetch("/settings", {
 			method: "POST",
 		});
 		if (!res.ok) {
 			return alert("Failed to log out");
 		}
-		goto("/login");
+		goto("/login", { invalidateAll: true });
 	};
 
 	const resetAccountForm = () => {

@@ -6,6 +6,9 @@ export const users = sqliteTable("users", {
 		.$defaultFn(() => crypto.randomUUID()),
 	username: text("username").notNull().unique(),
 	passwordHash: text("passwordHash").notNull(),
+	isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
+	// Nullable: accounts created before this column existed have no date.
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
 });
 
 export const exercises = sqliteTable("exercises", {
@@ -18,19 +21,6 @@ export const exercises = sqliteTable("exercises", {
 		.$defaultFn(() => new Date())
 		.$onUpdate(() => new Date()),
 	workoutsJsn: text("workouts_string").notNull(),
-});
-
-export const exerciseUpdateLog = sqliteTable("exercises_update_log", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	exerciseId: integer("exercise_id")
-		.notNull()
-		.references(() => exercises.id),
-	action: text("action", { enum: ["INSERT", "UPDATE", "DELETE"] }).notNull(),
-	changedAt: integer("changed_at", { mode: "timestamp_ms" })
-		.notNull()
-		.$defaultFn(() => new Date()),
-	changedBy: text("changed_by").references(() => users.uuid),
-	// diff: text('diff'), // JSON string of what changed
 });
 
 export const routines = sqliteTable("routines", {

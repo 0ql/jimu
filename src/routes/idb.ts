@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { writable, type Writable } from "svelte/store";
+import { page } from "$app/state";
 
 export type Exercise = {
 	id?: number;
@@ -26,6 +27,8 @@ export type SyncMeta = {
 	id?: number;
 	lastChanged: number;
 	dirty?: boolean;
+	/** Only on the OWNER_META record: the account this browser's local data belongs to. */
+	owner?: string;
 };
 
 export interface DB extends DBSchema {
@@ -45,6 +48,7 @@ export interface DB extends DBSchema {
 
 export const EXERCISES_META = 1;
 export const ROUTINES_META = 2;
+export const OWNER_META = 3;
 
 export let idb: IDBPDatabase<DB>;
 export const synced = writable(true);
@@ -156,21 +160,32 @@ export const markExercisesChanged = async () => {
 	scheduleSync();
 };
 
+// Which account the local data has been checked against in this page session.
+let claimedFor = "";
+let claiming: Promise<void> = Promise.resolve();
+
 export const loadDB = async () => {
-	if (idb) return idb;
-	idb = await openDB<DB>("main", 3, {
-		async upgrade(db, oldVersion) {
-			if (!db.objectStoreNames.contains("exercises")) {
-				db.createObjectStore("exercises", { keyPath: "id", autoIncrement: true });
-			}
-			if (!db.objectStoreNames.contains("meta")) {
-				db.createObjectStore("meta", { keyPath: "id" });
-			}
-			if (!db.objectStoreNames.contains("routines")) {
-				db.createObjectStore("routines", { keyPath: "id", autoIncrement: true });
-			}
-		},
-	});
+	if (!idb)
+		idb = await openDB<DB>("main", 3, {
+			async upgrade(db, oldVersion) {
+				if (!db.objectStoreNames.contains("exercises")) {
+					db.createObjectStore("exercises", { keyPath: "id", autoIncrement: true });
+				}
+				if (!db.objectStoreNames.contains("meta")) {
+					db.createObjectStore("meta", { keyPath: "id" });
+				}
+				if (!db.objectStoreNames.contains("routines")) {
+					db.createObjectStore("routines", { keyPath: "id", autoIncrement: true });
+				}
+			},
+		});
+	// Every page reads local data through here, so check ownership before anything else does.
+	const uuid: string | undefined = page.data.userUuid;
+	if (uuid && uuid !== claimedFor) {
+		claimedFor = uuid;
+		claiming = claimLocalData(uuid);
+	}
+	await claiming;
 	return idb;
 };
 
@@ -263,4 +278,43 @@ const removeExerciseFromAllRoutines = async (exerciseId: number) => {
 
 export const getAll = async <S extends "meta" | "exercises">(storeName: S) => {
 	return await idb.getAll(storeName);
+};
+
+/** Clears the local stores. Takes the open database so it never waits on loadDB(). */
+const clearStores = async (db: IDBPDatabase<DB>) => {
+	if (syncTimer) clearTimeout(syncTimer);
+	if (routineSyncTimer) clearTimeout(routineSyncTimer);
+	await db.clear("exercises");
+	await db.clear("routines");
+	await db.clear("meta");
+	exercises.set([]);
+	routines.set([]);
+	synced.set(true);
+};
+
+/** Wipes this browser's copy of the data (exercises, routines, sync bookkeeping). */
+export const resetLocalData = async () => {
+	await clearStores(await loadDB());
+	// Check ownership again on the next load, whoever signs in.
+	claimedFor = "";
+};
+
+/**
+ * Makes sure local data belongs to `uuid`. If another account's data is still here (e.g. that
+ * account's session expired and someone else logged in), it is wiped before any sync so it can
+ * never be uploaded into this account. The same account keeps its unsynced edits.
+ * Runs inside loadDB(), so it must use the open database directly.
+ */
+const claimLocalData = async (uuid: string) => {
+	const owner = (await idb.get("meta", OWNER_META))?.owner;
+	if (owner && owner !== uuid) await clearStores(idb);
+	if (owner !== uuid) await idb.put("meta", { id: OWNER_META, lastChanged: 0, owner: uuid });
+};
+
+/** Logout: upload pending changes, then clear local data so the next account starts clean. */
+export const syncAndClearLocalData = async () => {
+	const db = await loadDB();
+	if ((await db.get("meta", EXERCISES_META))?.dirty) await syncToServer();
+	if ((await db.get("meta", ROUTINES_META))?.dirty) await syncRoutinesToServer();
+	await resetLocalData();
 };

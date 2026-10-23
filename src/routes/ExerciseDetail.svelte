@@ -81,18 +81,20 @@
 	<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
 		<div class="flex flex-col gap-1.5 min-w-0">
 			<h1 class="m-0 font-display font-semibold text-[32px] leading-none">{editor.title}</h1>
-			<div class="flex flex-wrap items-center gap-2">
+			<!-- Fixed height and no wrapping: the line is 24px whether or not routine tags show,
+			     so the layout below doesn't move between exercises. -->
+			<div class="h-6 flex items-center gap-2 min-w-0 overflow-hidden whitespace-nowrap">
 				{#if editor.note.trim()}
-					<span class="font-mono text-[13px] text-[#bdbdc4]">{editor.note.trim()}</span>
+					<span class="font-mono text-[13px] text-[#bdbdc4] truncate">{editor.note.trim()}</span>
 					<span class="text-[#4a4a52]" aria-hidden="true">·</span>
 				{/if}
 				{#each tags as tag (tag.id)}
 					<span
-						class="h-6 px-2.5 rounded-full border-solid border-1 border-[#2e2e34] text-xs font-semibold text-[#c9c9cf] flex items-center"
+						class="h-6 shrink-0 px-2.5 rounded-full border-solid border-1 border-[#2e2e34] text-xs font-semibold text-[#c9c9cf] flex items-center"
 						>{tag.name}</span
 					>
 				{/each}
-				<span class="text-[13px] text-subtle">
+				<span class="text-[13px] text-subtle shrink-0">
 					{editor.sessionCount} session{editor.sessionCount === 1 ? "" : "s"}
 				</span>
 			</div>

@@ -25,7 +25,8 @@
 				error = "That username and password don't match.";
 				return;
 			}
-			goto("/");
+			// invalidateAll reloads layout data (e.g. the admin flag) for the account that just logged in.
+			goto("/", { invalidateAll: true });
 		} finally {
 			loading = false;
 		}

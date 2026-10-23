@@ -8,7 +8,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const sessionId = event.cookies.get("session");
 	const session = sessionId ? await validateSession(sessionId) : null;
 
-	event.locals.user = { uuid: session ? session.userUuid : "" };
+	event.locals.user = { uuid: session?.userUuid ?? "", isAdmin: session?.isAdmin ?? false };
 
 	if (!event.locals.user?.uuid && !publicRoutes.includes(event.url.pathname)) {
 		redirect(303, "/login");

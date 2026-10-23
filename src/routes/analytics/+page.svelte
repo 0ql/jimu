@@ -186,7 +186,7 @@
 <svelte:window onkeydown={onWindowKey} />
 
 <main
-	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 flex flex-col lg:flex-row lg:items-start gap-6"
+	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 lg:pb-5 flex flex-col lg:flex-row lg:items-start gap-6"
 	style="padding-top: calc(var(--nav-h, 6rem) + 1.25rem)"
 >
 	<aside

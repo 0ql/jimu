@@ -117,6 +117,9 @@ kbd {
 /* ── Scrollbars: thin and dark to match the surfaces ── */
 html {
 	color-scheme: dark;
+	/* Always reserve the scrollbar's space, so pages that don't scroll are as wide as pages
+	   that do and nothing jumps sideways when switching tabs. */
+	scrollbar-gutter: stable;
 }
 
 * {
