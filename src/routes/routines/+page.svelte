@@ -1,121 +1,181 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import {
-		exercises,
-		loadExercises,
-		loadRoutines,
-		routines,
-		addRoutine,
-		saveRoutine,
-		deleteRoutine,
-		type Routine,
-	} from "../idb";
+	import { exercises, loadExercises, loadRoutines, routines, type Routine } from "../idb";
+	import { daysSince, isTodayLine, formatWeight, lineStats, parseLog } from "$lib/sets";
 	import Nav from "../Nav.svelte";
-	import Card from "$lib/ui/Card.svelte";
-	import Btn from "$lib/ui/Button.svelte";
-	import Input from "$lib/ui/Input.svelte";
-	import PageTitle from "$lib/ui/PageTitle.svelte";
-	import Popup from "$lib/ui/Popup.svelte";
-	import Checkbox from "$lib/ui/Checkbox.svelte";
+	import RoutineSheet from "./RoutineSheet.svelte";
 
 	onMount(async () => {
 		await loadExercises();
 		await loadRoutines();
+		loaded = true;
 	});
 
-	let showCreatePopup = $state(false);
-	let showEditPopup = $state(false);
-	let newRoutineName = $state("");
-	let editingRoutine: Routine | null = $state(null);
-	let selectedExerciseIds = $state<number[]>([]);
+	// Avoid flashing the empty state before IndexedDB has loaded.
+	let loaded = $state(false);
 
-	const openCreate = () => {
-		newRoutineName = "";
-		selectedExerciseIds = [];
-		showCreatePopup = true;
+	let sheetOpen = $state(false);
+	let sheetRoutine: Routine | null = $state(null);
+	let sheetKey = $state(0);
+
+	const openSheet = (routine: Routine | null) => {
+		sheetRoutine = routine;
+		sheetKey++;
+		sheetOpen = true;
 	};
 
-	const openEdit = (routine: Routine) => {
-		editingRoutine = { ...routine, exerciseIds: [...routine.exerciseIds] };
-		selectedExerciseIds = [...routine.exerciseIds];
-		showEditPopup = true;
-	};
+	const MAX_LISTED = 6;
 
-	const toggleExercise = (id: number) => {
-		if (selectedExerciseIds.includes(id)) {
-			selectedExerciseIds = selectedExerciseIds.filter((e) => e !== id);
-		} else {
-			selectedExerciseIds = [...selectedExerciseIds, id];
-		}
-	};
-
-	const create = async () => {
-		if (!newRoutineName.trim()) return;
-		await addRoutine(newRoutineName.trim(), selectedExerciseIds);
-		showCreatePopup = false;
-	};
-
-	const save = async () => {
-		if (!editingRoutine) return;
-		await saveRoutine({ ...editingRoutine, exerciseIds: selectedExerciseIds });
-		showEditPopup = false;
-	};
+	const cards = $derived.by(() => {
+		const byId = new Map($exercises.map((e) => [e.id, e]));
+		return $routines.map((routine) => {
+			const items = [...new Set(routine.exerciseIds)]
+				.map((id) => byId.get(id))
+				.filter((e) => e !== undefined)
+				.map((e) => {
+					const { current } = parseLog(e.workoutsString);
+					const top = lineStats(current.sets).top;
+					return {
+						id: e.id!,
+						title: e.title,
+						done: isTodayLine(current) && current.sets.length > 0,
+						days: daysSince(current.date, current.year),
+						top: top ? `${formatWeight(top.weight)}×${top.reps}` : "",
+					};
+				})
+				.sort((a, b) => a.title.localeCompare(b.title));
+			const known = items.map((i) => i.days).filter((d) => d !== null);
+			const lastDays = known.length ? Math.min(...known) : null;
+			return {
+				routine,
+				items,
+				done: items.filter((i) => i.done).length,
+				last:
+					lastDays === null
+						? "Not trained yet"
+						: lastDays === 0
+							? "Trained today"
+							: `Last trained ${lastDays}d ago`,
+			};
+		});
+	});
 </script>
 
-<main class="px-4 pt-[calc(var(--nav-h,6rem)+1rem)] pb-8 max-w-5xl mx-auto">
-	<PageTitle cl="mb-4">Routines</PageTitle>
+<main
+	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 flex flex-col gap-5"
+	style="padding-top: calc(var(--nav-h, 6rem) + 1.25rem)"
+>
+	<header class="flex items-end justify-between gap-4">
+		<div class="flex flex-col gap-0.5">
+			<h1 class="m-0 font-display font-semibold text-[30px] leading-none">Routines</h1>
+			<span class="text-sm text-subtle">
+				{#if $routines.length}
+					{$routines.length} routine{$routines.length === 1 ? "" : "s"} · Train filters your exercise
+					list
+				{:else}
+					Group exercises you train together
+				{/if}
+			</span>
+		</div>
+	</header>
 
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-		{#each $routines as routine}
-			<Card>
-				<div class="flex justify-between items-start">
-					<div>
-						<p class="font-semibold text-lg m-0">{routine.name}</p>
-						<p class="text-xs text-fg-alt mt-1 m-0">
-							{routine.exerciseIds.length} exercise{routine.exerciseIds.length !== 1 ? "s" : ""}
-						</p>
+	{#if !loaded}
+		<!-- loading -->
+	{:else if cards.length === 0}
+		<div
+			class="flex flex-col items-center gap-3.5 py-14 px-4 text-center rounded-2xl bg-surface border-solid border-1 border-hairline"
+		>
+			<i class="i-tabler-list-details block size-8 text-faint"></i>
+			<p class="text-subtle text-[15px] max-w-sm">
+				Group exercises into routines, like a push or leg day, to filter your list while you train.
+			</p>
+			<button
+				onclick={() => openSheet(null)}
+				class="h-12 px-4.5 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-[#111]"
+			>
+				<i class="i-tabler-plus block size-[18px] text-[#111]"></i>
+				Create your first routine
+			</button>
+		</div>
+	{:else}
+		<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+			{#each cards as card (card.routine.id)}
+				<article
+					class="flex flex-col gap-3.5 p-4 rounded-2xl bg-surface border-solid border-1 border-hairline"
+				>
+					<div class="flex items-start justify-between gap-3">
+						<div class="flex flex-col gap-1 min-w-0">
+							<h2 class="m-0 font-display font-semibold text-[20px] leading-none truncate">
+								{card.routine.name}
+							</h2>
+							<span class="text-[13px] text-subtle">
+								{card.items.length} exercise{card.items.length === 1 ? "" : "s"} · {card.last}
+							</span>
+						</div>
+						{#if card.items.length > 0}
+							<div class="flex flex-col items-end gap-1.5 shrink-0">
+								<span class="font-mono text-xs {card.done ? 'text-signal' : 'text-subtle'}"
+									>{card.done}/{card.items.length} today</span
+								>
+								<div class="flex gap-[3px]" aria-hidden="true">
+									{#each card.items as item}
+										<span class="w-2 h-4 rounded-[2px] {item.done ? 'bg-signal' : 'bg-[#2e2e34]'}"
+										></span>
+									{/each}
+								</div>
+							</div>
+						{/if}
 					</div>
-					<button
-						onclick={() => deleteRoutine(routine)}
-						aria-label="Delete routine"
-						class="border-none bg-transparent cursor-pointer"
-					>
-						<i class="block i-tabler-trash size-5 bg-destructive"></i>
-					</button>
-				</div>
-				<Btn onclick={() => openEdit(routine)} cl="cursor-pointer mt-3">Edit</Btn>
-			</Card>
-		{/each}
-	</div>
+
+					{#if card.items.length > 0}
+						<ul
+							class="m-0 p-0 list-none flex flex-col rounded-xl bg-bg border-solid border-1 border-[#1f1f23]"
+						>
+							{#each card.items.slice(0, MAX_LISTED) as item (item.id)}
+								<li
+									class="flex items-center gap-2.5 px-3 py-2 border-b-solid border-b-1 border-b-[#1a1a1d] last:border-b-0"
+								>
+									<span
+										class="size-[7px] rounded-full shrink-0 {item.done
+											? 'bg-signal'
+											: 'bg-[#2e2e34]'}"
+									></span>
+									<span class="flex-1 min-w-0 truncate text-sm">{item.title}</span>
+									<span class="font-mono text-xs text-subtle shrink-0">{item.top}</span>
+								</li>
+							{/each}
+							{#if card.items.length > MAX_LISTED}
+								<li class="px-3 py-2 text-xs text-subtle">
+									+{card.items.length - MAX_LISTED} more
+								</li>
+							{/if}
+						</ul>
+					{:else}
+						<p class="text-sm text-subtle">No exercises yet. Add some with Edit.</p>
+					{/if}
+
+					<div class="flex gap-2">
+						<a
+							href="/?routine={card.routine.id}"
+							class="flex-1 h-11 rounded-xl bg-signal no-underline flex items-center justify-center gap-2 text-[15px] font-semibold text-[#111]"
+						>
+							<i class="i-tabler-player-play block size-4 text-[#111]"></i>Train
+						</a>
+						<button
+							onclick={() => openSheet(card.routine)}
+							class="h-11 px-4 rounded-xl border-none bg-surface-3 cursor-pointer flex items-center gap-2 text-[15px]"
+						>
+							<i class="i-tabler-pencil block size-4"></i>Edit
+						</button>
+					</div>
+				</article>
+			{/each}
+		</div>
+	{/if}
 </main>
 
-<Popup title="New Routine" bind:showPopup={showCreatePopup}>
-	<Input placeholder="Routine name" bind:value={newRoutineName} cl="mt-2" />
-	<p class="text-xs uppercase tracking-widest text-fg-alt mt-4 mb-2 m-0">Exercises</p>
-	<div class="flex flex-col gap-2 overflow-y-auto max-h-48">
-		{#each $exercises as exercise}
-			<Checkbox
-				label={exercise.title}
-				checked={selectedExerciseIds.includes(exercise.id!)}
-				onchange={() => toggleExercise(exercise.id!)}
-			/>
-		{/each}
-	</div>
-	<Btn onclick={create} cl="cursor-pointer mt-3">Create</Btn>
-</Popup>
+{#key sheetKey}
+	<RoutineSheet routine={sheetRoutine} bind:showPopup={sheetOpen} />
+{/key}
 
-<Popup title="Edit Routine" bind:showPopup={showEditPopup}>
-	<p class="text-xs uppercase tracking-widest text-fg-alt mt-2 mb-2 m-0">Exercises</p>
-	<div class="flex flex-col gap-2 overflow-y-auto max-h-48">
-		{#each $exercises as exercise}
-			<Checkbox
-				label={exercise.title}
-				checked={selectedExerciseIds.includes(exercise.id!)}
-				onchange={() => toggleExercise(exercise.id!)}
-			/>
-		{/each}
-	</div>
-	<Btn onclick={save} cl="cursor-pointer mt-3">Save</Btn>
-</Popup>
-
-<Nav onadd={openCreate} />
+<Nav onadd={() => openSheet(null)} addLabel="New routine" />

@@ -47,7 +47,7 @@
 		{/if}
 		<div class="flex justify-between items-center mb-2">
 			<!-- <PageTitle cl={isMobile ? "my-4" : "text-sm"}>{title}</PageTitle> -->
-			<h1 class="font-cond font-bold m-0 text-[26px]">{title}</h1>
+			<h1 class="font-display font-semibold m-0 text-[20px]">{title}</h1>
 			<button
 				class="border-none bg-transparent cursor-pointer"
 				aria-label="Close"

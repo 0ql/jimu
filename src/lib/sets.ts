@@ -5,12 +5,18 @@ export type ParsedSet =
 	| { kind: "invalid"; token: string };
 
 export type ParsedLine = {
+	/** "dd.mm." as written, without the year. */
 	date: string | null;
+	/** Full year when the line spells one out (dd.mm.yy or dd.mm.yyyy), else null. */
+	year: number | null;
 	rest: string;
 	sets: ParsedSet[];
 };
 
-const DATE_RE = /^\s*(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})\.)?/;
+// dd.mm. with an optional year: dd.mm.yy, dd.mm.yyyy (a trailing dot is fine). The year must end
+// at a dot, space or line end, so "18.10.30x10" stays a date followed by a set.
+const DATE_RE = /^\s*(\d{1,2})\.(\d{1,2})\.(?:(\d{4}|\d{2})(?=[.\s]|$)\.?)?/;
+const fullYear = (raw: string) => (raw.length === 2 ? 2000 + parseInt(raw) : parseInt(raw));
 const SET_RE = /^([adAD])?(\d+(?:[.,]\d+)?)?[xX×](\d+)$/;
 
 /** "18.10." for the given day, in the same format the log lines use. */
@@ -24,6 +30,7 @@ export const dateStamp = (d = new Date()) =>
 export const parseLine = (line: string): ParsedLine => {
 	const m = line.match(DATE_RE);
 	const date = m ? `${m[1].padStart(2, "0")}.${m[2].padStart(2, "0")}.` : null;
+	const year = m?.[3] !== undefined ? fullYear(m[3]) : null;
 	const rest = (m ? line.slice(m[0].length) : line).trim();
 
 	let lastWeight: number | null = null;
@@ -40,7 +47,7 @@ export const parseLine = (line: string): ParsedLine => {
 			return { kind, weight: lastWeight, reps: parseInt(t[3]), n };
 		});
 
-	return { date, rest, sets };
+	return { date, year, rest, sets };
 };
 
 /** The last two non-empty lines of a log: today's (or the latest) entry and the one before. */
@@ -75,13 +82,58 @@ export const formatWeight = (w: number | null) =>
 
 export const formatKg = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
-/** "today", "4d" — dates without a year are assumed to be within the last 12 months. */
-export const daysAgo = (date: string | null, now = new Date()) => {
-	if (!date) return "";
+/**
+ * Days since a "dd.mm." date. Without a year the date is assumed to be within the last 12 months.
+ */
+export const daysSince = (date: string | null, year: number | null = null, now = new Date()) => {
+	if (!date) return null;
 	const [d, m] = date.split(".").map(Number);
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-	let then = new Date(now.getFullYear(), m - 1, d);
-	if (then > today) then = new Date(now.getFullYear() - 1, m - 1, d);
-	const days = Math.round((today.getTime() - then.getTime()) / 86400000);
-	return days === 0 ? "today" : `${days}d`;
+	let then = new Date(year ?? now.getFullYear(), m - 1, d);
+	if (year === null && then > today) then = new Date(now.getFullYear() - 1, m - 1, d);
+	return Math.round((today.getTime() - then.getTime()) / 86400000);
+};
+
+/** "today", "4d" */
+export const daysAgo = (date: string | null, year: number | null = null) => {
+	const days = daysSince(date, year);
+	return days === null ? "" : days === 0 ? "today" : `${days}d`;
+};
+
+/** Whether a parsed line is today's entry; a written year has to match too. */
+export const isTodayLine = (line: Pick<ParsedLine, "date" | "year">, now = new Date()) =>
+	line.date === dateStamp(now) && (line.year === null || line.year === now.getFullYear());
+
+/**
+ * Gives every dated line of a log a full date. Lines rarely carry a year, so it is worked out
+ * backwards from today: the newest line is within the last 12 months, and going up the log the
+ * year drops whenever the month jumps forward. A written year (dd.mm.yy or dd.mm.yyyy) always wins.
+ */
+export const datedLines = (log: string, now = new Date()) => {
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const rows = log
+		.split("\n")
+		.map((line) => ({ line, m: line.match(DATE_RE) }))
+		.filter((r) => r.m);
+	const out: { date: Date; line: string }[] = [];
+	let year: number | null = null;
+	let laterMonth = 13;
+	for (let i = rows.length - 1; i >= 0; i--) {
+		const { line, m } = rows[i];
+		const day = parseInt(m![1]);
+		const month = parseInt(m![2]);
+		if (m![3] !== undefined) {
+			year = fullYear(m![3]);
+		} else if (year === null) {
+			year =
+				new Date(today.getFullYear(), month - 1, day) > today
+					? today.getFullYear() - 1
+					: today.getFullYear();
+		} else if (month > laterMonth) {
+			year--;
+		}
+		laterMonth = month;
+		out.push({ date: new Date(year, month - 1, day), line });
+	}
+	return out.reverse();
 };

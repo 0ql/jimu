@@ -1,183 +1,409 @@
 <script lang="ts">
-	import { LayerCake, Svg } from "layercake";
-	import { scaleTime } from "d3-scale";
-	import Scatter from "./_components/Scatter.svg.svelte";
-	import AxisX from "./_components/AxisX.svelte";
-	import AxisY from "./_components/AxisY.svelte";
-	import { exercises, loadExercises } from "../idb";
 	import { onMount } from "svelte";
 	import { page } from "$app/state";
-	import { type Exercise } from "../idb";
+	import { exercises, loadExercises, type Exercise } from "../idb";
+	import { datedLines, formatKg, formatWeight, parseLine, type ParsedSet } from "$lib/sets";
 	import Nav from "../Nav.svelte";
-	import Card from "$lib/ui/Card.svelte";
-	import PageTitle from "$lib/ui/PageTitle.svelte";
-	import H2 from "$lib/ui/H2.svelte";
-	import Select from "$lib/ui/Select.svelte";
+	import ProgressChart from "./ProgressChart.svelte";
+	import SearchBar from "../SearchBar.svelte";
 
-	let selection: number | undefined = $state();
-	let selectedExercise: Exercise | null = $state(null);
+	type Metric = "volume" | "top" | "e1rm" | "reps";
+	type Range = "3m" | "6m" | "1y" | "all";
+	type Session = {
+		date: Date;
+		tokens: { text: string; kind: ParsedSet["kind"] }[];
+		volume: number;
+		top: number | null;
+		e1rm: number | null;
+		reps: number;
+	};
+
+	const METRICS: { id: Metric; label: string; hint: string }[] = [
+		{ id: "volume", label: "Volume", hint: "kg · weight × reps of working and drop sets" },
+		{ id: "top", label: "Top weight", hint: "kg · heaviest working set" },
+		{ id: "e1rm", label: "Est. 1RM", hint: "kg · best working set, Epley formula" },
+		{ id: "reps", label: "Reps", hint: "reps · working and drop sets" },
+	];
+	const RANGES: { id: Range; label: string; days: number | null }[] = [
+		{ id: "3m", label: "3M", days: 91 },
+		{ id: "6m", label: "6M", days: 182 },
+		{ id: "1y", label: "1Y", days: 365 },
+		{ id: "all", label: "All", days: null },
+	];
+
+	let metric = $state<Metric>("volume");
+	let range = $state<Range>("6m");
+	let selectedId: number | null = $state(null);
+	let query = $state("");
+
+	// Empty states wait for IndexedDB so they don't flash on every visit.
+	let loaded = $state(false);
 
 	onMount(async () => {
 		await loadExercises();
+		loaded = true;
 		const id = Number(page.url.searchParams.get("exercise"));
-		if (id && $exercises.some((exercise) => exercise.id === id)) {
-			selection = id;
-			showExercise();
-		}
+		if (id && $exercises.some((e) => e.id === id)) selectedId = id;
 	});
 
-	let points: any = $state([]);
-
-	const START_YEAR = 2023;
-
-	const parseWorkoutData = (rawStrings: string[]) => {
-		let year = START_YEAR;
-		let lastMonth = 0;
-		return rawStrings
-			.map((row) => {
-				const dateMatch = row.match(/^(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})\.)?/);
-				if (!dateMatch) return null;
-
-				const day = parseInt(dateMatch[1]);
-				const month = parseInt(dateMatch[2]);
-
-				if (dateMatch[3] !== undefined) {
-					const rawYear = parseInt(dateMatch[3]);
-					year = rawYear < 100 ? 2000 + rawYear : rawYear;
-				} else if (month < lastMonth) {
-					year++;
-				}
-				lastMonth = month;
-
-				const setRegex = /(?:(\d+(?:\.\d+)?)\s*)?x\s*(\d+)/g;
-
-				let match;
-				let totalVolume = 0;
-				let maxWeight = 0;
-				let totalReps = 0;
-				let lastWeight = 0;
-
-				while ((match = setRegex.exec(row)) !== null) {
-					const weight = match[1] !== undefined ? parseFloat(match[1]) : lastWeight;
-					const reps = parseInt(match[2]);
-					lastWeight = weight;
-
-					totalVolume += weight * reps;
-					totalReps += reps;
-					if (weight > maxWeight) maxWeight = weight;
-				}
-
-				if (totalVolume === 0) return null;
-
-				return {
-					x: new Date(year, month - 1, day),
-					y: totalVolume,
-					maxWeight,
-					totalReps,
-					rawText: row,
-				};
-			})
-			.filter(Boolean);
+	/** One entry per training day; a day written twice in the log is merged. */
+	const sessionsOf = (exercise: Exercise): Session[] => {
+		const byDay = new Map<number, Session>();
+		for (const { date, line } of datedLines(exercise.workoutsString)) {
+			const { rest, sets } = parseLine(line);
+			if (!sets.length) continue;
+			const tokens = rest
+				.split(/\s+/)
+				.filter(Boolean)
+				.map((text, i) => ({ text, kind: sets[i].kind }));
+			const s = byDay.get(date.getTime()) ?? {
+				date,
+				tokens: [],
+				volume: 0,
+				top: null,
+				e1rm: null,
+				reps: 0,
+			};
+			s.tokens.push(...tokens);
+			for (const set of sets) {
+				if (set.kind === "invalid" || set.kind === "warmup") continue;
+				s.reps += set.reps;
+				if (set.weight === null) continue;
+				s.volume += set.weight * set.reps;
+				if (set.kind !== "work") continue;
+				s.top = Math.max(s.top ?? 0, set.weight);
+				s.e1rm = Math.max(s.e1rm ?? 0, set.weight * (1 + set.reps / 30));
+			}
+			byDay.set(date.getTime(), s);
+		}
+		return [...byDay.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
 	};
 
-	const showExercise = () => {
-		selectedExercise = $exercises.filter((exercise) => exercise.id === selection)[0];
-		const cleanData = parseWorkoutData(selectedExercise.workoutsString.split("\n"));
-		points = cleanData;
-	};
-
-	let yAxisField = $state("y");
-
-	const metricLabel = $derived(
-		yAxisField === "y" ? "Volume" : yAxisField === "maxWeight" ? "Max Weight" : "Total Reps",
+	const overview = $derived(
+		$exercises
+			.map((e) => ({ exercise: e, sessions: sessionsOf(e) }))
+			.sort((a, b) => a.exercise.title.localeCompare(b.exercise.title)),
 	);
-	const metricUnit = $derived(yAxisField === "totalReps" ? "" : " kg");
+	const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+	const listed = $derived(
+		overview.filter((o) => norm(o.exercise.title).includes(norm(query.trim()))),
+	);
+
+	// Default to the most recently trained exercise.
+	const selected = $derived.by(() => {
+		const picked = overview.find((o) => o.exercise.id === selectedId);
+		if (picked) return picked;
+		return [...overview].sort(
+			(a, b) => (b.sessions.at(-1)?.date.getTime() ?? 0) - (a.sessions.at(-1)?.date.getTime() ?? 0),
+		)[0];
+	});
+
+	// Same keys as the exercises page: / focuses the filter, ↑↓ switch, Esc clears.
+	let searchInput: HTMLInputElement | undefined = $state();
+	const move = (step: number) => {
+		if (!listed.length) return;
+		const i = listed.findIndex((o) => o.exercise.id === selected?.exercise.id);
+		selectedId = listed[Math.min(listed.length - 1, Math.max(0, i + step))].exercise.id!;
+	};
+	const onSearchKey = (e: KeyboardEvent) => {
+		if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+			e.preventDefault();
+			move(e.key === "ArrowDown" ? 1 : -1);
+		} else if (e.key === "Escape") {
+			query = "";
+		}
+	};
+	const onWindowKey = (e: KeyboardEvent) => {
+		if (e.key !== "/" || !searchInput?.offsetParent) return;
+		if ((e.target as HTMLElement).closest("input, textarea, select")) return;
+		e.preventDefault();
+		searchInput.focus();
+	};
+
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const inRange = $derived.by(() => {
+		if (!selected) return [];
+		const days = RANGES.find((r) => r.id === range)!.days;
+		if (days === null) return selected.sessions;
+		const from = today.getTime() - days * 86400000;
+		return selected.sessions.filter((s) => s.date.getTime() >= from);
+	});
+
+	const valueOf = (s: Session) => s[metric];
+	const format = (n: number) =>
+		metric === "reps"
+			? formatKg(n)
+			: n >= 1000
+				? `${formatKg(n)} kg`
+				: `${formatWeight(Math.round(n * 10) / 10)} kg`;
+
+	const points = $derived(
+		inRange
+			.filter((s) => valueOf(s) !== null)
+			.map((s) => ({
+				date: s.date,
+				value: valueOf(s)!,
+				detail: s.tokens.map((t) => t.text).join(" "),
+			})),
+	);
 
 	const stats = $derived.by(() => {
 		if (!points.length) return null;
-		const best = [...points].reduce((a: any, b: any) => (b[yAxisField] > a[yAxisField] ? b : a));
-		const last = [...points].reduce((a: any, b: any) => (b.x > a.x ? b : a));
-		const avg = Math.round(
-			points.reduce((s: number, p: any) => s + p[yAxisField], 0) / points.length,
-		);
-		const fmt = (d: Date) =>
-			d.toLocaleDateString("de-DE", {
-				day: "2-digit",
-				month: "short",
-				year: "2-digit",
-			});
-		return { total: points.length, best, last, avg, fmt };
+		const latest = points.at(-1)!;
+		const previous = points.at(-2);
+		const best = points.reduce((a, b) => (b.value > a.value ? b : a));
+		const first = points[0];
+		return {
+			latest,
+			delta: previous ? latest.value - previous.value : null,
+			best,
+			change:
+				points.length > 1 && first.value
+					? ((latest.value - first.value) / first.value) * 100
+					: null,
+		};
 	});
+
+	const signed = (n: number, f: (n: number) => string) =>
+		`${n > 0 ? "+" : n < 0 ? "−" : "±"}${f(Math.abs(n))}`;
+	const shortDate = (d: Date) =>
+		d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+	const tokenClass: Record<ParsedSet["kind"], string> = {
+		warmup: "text-faint",
+		work: "text-[#c9c9cf]",
+		drop: "text-drop",
+		invalid: "text-[#ff9b9b]",
+	};
+	const tile =
+		"flex flex-col gap-0.5 px-3.5 py-3 rounded-xl bg-surface border-solid border-1 border-hairline min-w-0";
+	const tileValue =
+		"font-display font-semibold text-[22px] leading-[1.2] whitespace-nowrap truncate";
+	const segment = (on: boolean) =>
+		`h-9 px-3.5 rounded-lg border-none cursor-pointer text-sm font-semibold whitespace-nowrap ${on ? "bg-dark text-bg" : "bg-transparent text-[#c9c9cf] hover:bg-surface-3"}`;
 </script>
 
-<main class="pt-[calc(var(--nav-h,6rem)+1rem)] pb-8 mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
-	<PageTitle cl="mb-4 col-span-full">Analytics</PageTitle>
+<svelte:window onkeydown={onWindowKey} />
 
-	<Card cl="col-span-full md:col-span-1">
-		<H2>Exercise</H2>
-		<Select bind:value={selection} onchange={showExercise}>
-			{#each $exercises as exercise}
-				<option class="bg-bg" value={exercise.id}>{exercise.title}</option>
+<main
+	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 flex flex-col lg:flex-row lg:items-start gap-6"
+	style="padding-top: calc(var(--nav-h, 6rem) + 1.25rem)"
+>
+	<aside
+		aria-label="Exercises"
+		class="hidden lg:flex w-[340px] xl:w-[380px] shrink-0 sticky flex-col gap-3"
+		style="top: calc(var(--nav-h, 5rem) + 1.25rem); max-height: calc(100dvh - var(--nav-h, 5rem) - 2.5rem)"
+	>
+		<SearchBar
+			bind:value={query}
+			bind:input={searchInput}
+			hint="/"
+			placeholder="Filter exercises"
+			label="Filter exercises"
+			onkeydown={onSearchKey}
+		/>
+		<div
+			class="flex-1 min-h-0 overflow-y-auto rounded-2xl bg-surface border-solid border-1 border-hairline"
+		>
+			{#each listed as o (o.exercise.id)}
+				{@const on = o.exercise.id === selected?.exercise.id}
+				<button
+					onclick={() => (selectedId = o.exercise.id!)}
+					aria-current={on ? "true" : undefined}
+					class="w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none border-b-solid border-b-1 border-b-[#1f1f23] last:border-b-0 text-left cursor-pointer {on
+						? 'bg-[#26262c]'
+						: 'bg-transparent hover:bg-[#1c1c20]'}"
+				>
+					<span
+						class="flex-1 min-w-0 truncate text-[15px] font-semibold {on
+							? 'text-white'
+							: 'text-[#e2e2e6]'}">{o.exercise.title}</span
+					>
+					<span class="font-mono text-xs text-subtle shrink-0">{o.sessions.length}×</span>
+				</button>
+			{:else}
+				{#if loaded}
+					<p class="px-3.5 py-4 text-sm text-subtle">No exercise matches “{query.trim()}”</p>
+				{/if}
 			{/each}
-		</Select>
+		</div>
+	</aside>
 
-		<H2 cl="mt-3">Metric</H2>
-		<Select bind:value={yAxisField} onchange={showExercise}>
-			<option class="bg-bg" value="y">Volume</option>
-			<option class="bg-bg" value="maxWeight">Max Weight</option>
-			<option class="bg-bg" value="totalReps">Total Reps</option>
-		</Select>
-	</Card>
+	<section class="flex-1 min-w-0 flex flex-col gap-4" aria-label="Progress">
+		{#if selected}
+			<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+				<div class="flex flex-col gap-1 min-w-0 w-full lg:w-auto">
+					<span class="text-sm text-subtle">Analytics</span>
+					<h1
+						class="hidden lg:block m-0 font-display font-semibold text-[32px] leading-none truncate"
+					>
+						{selected.exercise.title}
+					</h1>
+					<label class="lg:hidden relative block">
+						<span class="sr-only">Exercise</span>
+						<select
+							value={selected.exercise.id}
+							onchange={(e) => (selectedId = Number(e.currentTarget.value))}
+							class="w-full appearance-none h-12 pl-3.5 pr-10 rounded-xl bg-surface border-solid border-1 border-hairline font-display font-semibold text-[18px] outline-none cursor-pointer"
+						>
+							{#each overview as o (o.exercise.id)}
+								<option value={o.exercise.id} class="bg-bg text-base font-sans"
+									>{o.exercise.title}</option
+								>
+							{/each}
+						</select>
+						<i
+							class="i-tabler-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 size-5 pointer-events-none text-subtle"
+						></i>
+					</label>
+				</div>
+				<a
+					href="/?exercise={selected.exercise.id}"
+					class="h-10 px-3.5 rounded-[10px] bg-surface-3 no-underline flex items-center gap-2 text-sm shrink-0"
+				>
+					<i class="i-tabler-notes block size-4"></i>Open log
+				</a>
+			</div>
 
-	<Card cl="col-span-full md:col-span-3 h-64 p-8">
-		<LayerCake x="x" y={yAxisField} data={points} xScale={scaleTime()} padding={{ left: 30 }}>
-			<Svg>
-				<Scatter fill={"white"} r={3} />
-				<AxisX
-					ticks={5}
-					format={(d) =>
-						d instanceof Date
-							? d.toLocaleDateString("de-DE", {
-									month: "short",
-									year: "2-digit",
-								})
-							: String(d)}
-				/>
-				<AxisY />
-			</Svg>
-		</LayerCake>
-	</Card>
+			<div class="flex flex-wrap items-center justify-between gap-3">
+				<div
+					role="group"
+					aria-label="Metric"
+					class="flex gap-1 p-1 rounded-xl bg-surface border-solid border-1 border-hairline overflow-x-auto max-w-full"
+				>
+					{#each METRICS as m}
+						<button
+							aria-pressed={metric === m.id}
+							onclick={() => (metric = m.id)}
+							class={segment(metric === m.id)}>{m.label}</button
+						>
+					{/each}
+				</div>
+				<div
+					role="group"
+					aria-label="Time range"
+					class="flex gap-1 p-1 rounded-xl bg-surface border-solid border-1 border-hairline"
+				>
+					{#each RANGES as r}
+						<button
+							aria-pressed={range === r.id}
+							onclick={() => (range = r.id)}
+							class={segment(range === r.id)}>{r.label}</button
+						>
+					{/each}
+				</div>
+			</div>
 
-	{#if stats}
-		<Card label="Sessions">
-			<p class="text-2xl font-semibold mt-1">{stats.total}</p>
-		</Card>
-		<Card label="Avg {metricLabel}">
-			<p class="text-2xl font-semibold mt-1">{stats.avg}{metricUnit}</p>
-		</Card>
-		<Card label="Best {metricLabel}">
-			<p class="text-2xl font-semibold mt-1">
-				{stats.best[yAxisField]}{metricUnit}
-			</p>
-			<p class="text-xs color-fg-alt mt-1">{stats.fmt(stats.best.x)}</p>
-		</Card>
-		<Card label="Last Session">
-			<p class="text-2xl font-semibold mt-1">{stats.fmt(stats.last.x)}</p>
-		</Card>
-	{/if}
+			{#if stats}
+				<div class="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
+					<div class={tile}>
+						<span class="text-xs text-subtle">Latest · {shortDate(stats.latest.date)}</span>
+						<span class={tileValue}>{format(stats.latest.value)}</span>
+						{#if stats.delta !== null}
+							<span
+								class="font-mono text-xs {stats.delta > 0
+									? 'text-signal'
+									: stats.delta < 0
+										? 'text-drop'
+										: 'text-subtle'}">{signed(stats.delta, format)} vs previous</span
+							>
+						{/if}
+					</div>
+					<div class={tile}>
+						<span class="text-xs text-subtle">Best in range</span>
+						<span class={tileValue}>{format(stats.best.value)}</span>
+						<span class="font-mono text-xs text-subtle">{shortDate(stats.best.date)}</span>
+					</div>
+					<div class={tile}>
+						<span class="text-xs text-subtle">Change in range</span>
+						<span
+							class="{tileValue} {stats.change === null
+								? ''
+								: stats.change > 0
+									? 'text-signal'
+									: stats.change < 0
+										? 'text-drop'
+										: ''}"
+						>
+							{stats.change === null ? "—" : signed(Math.round(stats.change), (n) => `${n}%`)}
+						</span>
+						<span class="font-mono text-xs text-subtle">first to latest session</span>
+					</div>
+					<div class={tile}>
+						<span class="text-xs text-subtle">Sessions in range</span>
+						<span class={tileValue}>{points.length}</span>
+						<span class="font-mono text-xs text-subtle">{selected.sessions.length} all time</span>
+					</div>
+				</div>
+			{/if}
 
-	{#if selectedExercise}
-		<Card cl="col-span-full">
-			<details>
-				<summary class="py-1 cursor-pointer text-sm font-semibold list-none color-fg-alt">
-					Raw data
-				</summary>
-				<p class="text-sm mt-2 leading-relaxed">
-					{@html selectedExercise.workoutsString.replaceAll("\n", "<br>")}
-				</p>
-			</details>
-		</Card>
-	{/if}
+			<section
+				aria-label="Chart"
+				class="p-4 sm:p-5 rounded-2xl bg-surface border-solid border-1 border-hairline flex flex-col gap-3"
+			>
+				<div class="flex flex-wrap justify-between items-baseline gap-2">
+					<h2 class="m-0 text-[15px] font-semibold">
+						{METRICS.find((m) => m.id === metric)!.label} per session
+					</h2>
+					<span class="text-xs text-subtle">{METRICS.find((m) => m.id === metric)!.hint}</span>
+				</div>
+				{#if points.length}
+					<ProgressChart {points} label={METRICS.find((m) => m.id === metric)!.label} {format} />
+				{:else}
+					<p class="py-16 text-center text-sm text-subtle">
+						{selected.sessions.length
+							? "No sessions in this range. Try a longer one."
+							: "No sessions logged yet."}
+					</p>
+				{/if}
+			</section>
+
+			{#if inRange.length}
+				<section
+					aria-label="Sessions"
+					class="rounded-2xl bg-surface border-solid border-1 border-hairline overflow-hidden"
+				>
+					<h2 class="m-0 px-4 sm:px-5 pt-4 pb-2 text-[15px] font-semibold">Sessions</h2>
+					<div class="overflow-x-auto">
+						<table class="w-full border-collapse text-left">
+							<thead>
+								<tr class="text-xs text-subtle">
+									<th class="font-normal px-4 sm:px-5 py-2">Date</th>
+									<th class="font-normal px-3 py-2">Sets</th>
+									<th class="font-normal px-3 py-2 text-right">Volume</th>
+									<th class="font-normal px-3 py-2 text-right">Top</th>
+									<th class="font-normal px-4 sm:px-5 py-2 text-right">Est. 1RM</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each [...inRange].reverse() as s (s.date.getTime())}
+									<tr class="border-t-solid border-t-1 border-t-[#222227] font-mono text-[13px]">
+										<td class="px-4 sm:px-5 py-2.5 text-faint whitespace-nowrap"
+											>{shortDate(s.date)}</td
+										>
+										<td class="px-3 py-2.5 whitespace-nowrap">
+											{#each s.tokens as t, i}{#if i}&ensp;{/if}<span class={tokenClass[t.kind]}
+													>{t.text}</span
+												>{/each}
+										</td>
+										<td class="px-3 py-2.5 text-right whitespace-nowrap">{formatKg(s.volume)}</td>
+										<td class="px-3 py-2.5 text-right whitespace-nowrap"
+											>{s.top === null ? "—" : formatWeight(s.top)}</td
+										>
+										<td class="px-4 sm:px-5 py-2.5 text-right whitespace-nowrap"
+											>{s.e1rm === null ? "—" : formatWeight(Math.round(s.e1rm * 10) / 10)}</td
+										>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</section>
+			{/if}
+		{:else if loaded && $exercises.length === 0}
+			<p class="text-subtle py-16 text-center">Log some sets first, then come back for charts.</p>
+		{/if}
+	</section>
 </main>
 
 <Nav />

@@ -31,7 +31,7 @@ export default defineConfig({
 			"drop-border": "var(--drop-border)",
 		},
 		fontFamily: {
-			cond: '"Barlow Condensed", "Barlow", sans-serif',
+			display: '"Poppins", system-ui, sans-serif',
 			mono: '"JetBrains Mono", ui-monospace, monospace',
 		},
 	},
