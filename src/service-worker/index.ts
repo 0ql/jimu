@@ -1,13 +1,13 @@
-/// <reference types="@sveltejs/kit" />
-/// <reference no-default-lib="true"/>
-/// <reference lib="esnext" />
-/// <reference lib="webworker" />
+import { assets, immutable } from "$app/manifest";
+import { version } from "$app/env";
+import { self as sw } from "$app/service-worker";
 
-import { build, files, version } from "$service-worker";
-
-const sw = self as unknown as ServiceWorkerGlobalScope;
 const CACHE = `cache-${version}`;
-const ASSETS = [...build, ...files];
+// Built app files plus everything in static/. Kit 3 lists them relative to the app root
+// ("_app/immutable/..."), so resolve them to absolute paths to match request URLs.
+const ASSETS: string[] = [...immutable, ...assets].map(
+	(file) => new URL(file.path, sw.location.href).pathname,
+);
 
 sw.addEventListener("install", (event) => {
 	event.waitUntil(

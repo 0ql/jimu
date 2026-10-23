@@ -1,4 +1,4 @@
-FROM node:20-slim AS builder
+FROM node:24-slim AS builder
 WORKDIR /app
 RUN npm install -g pnpm
 
@@ -14,7 +14,7 @@ RUN mkdir -p /app/data
 ENV DATABASE_URL=${DATABASE_URL}
 RUN pnpm build
 
-FROM node:20-slim AS runner
+FROM node:24-slim AS runner
 WORKDIR /app
 
 COPY --from=builder /app/build ./build

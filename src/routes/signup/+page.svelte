@@ -34,6 +34,7 @@
 		try {
 			const res = await fetch("/signup", {
 				method: "POST",
+				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					username: credentials.username,
 					password: credentials.password2,

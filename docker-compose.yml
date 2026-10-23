@@ -8,7 +8,10 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=/app/data/sqlite.db
-      - ORIGIN=http://localhost:3000
+      # adapter-node 6 no longer reads ORIGIN; it takes the host from the request.
+      # Behind an HTTPS reverse proxy, forward the original protocol and host instead:
+      # - PROTOCOL_HEADER=x-forwarded-proto
+      # - HOST_HEADER=x-forwarded-host
     volumes:
       - jimu-data:/app/data
     restart: unless-stopped

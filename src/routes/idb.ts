@@ -90,7 +90,11 @@ export const syncToServer = async () => {
 	}
 	const editsAtStart = exerciseEdits;
 	const exercises = await idb.getAll("exercises");
-	const res = await fetch("/", { method: "POST", body: JSON.stringify(exercises) });
+	const res = await fetch("/", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(exercises),
+	});
 	if (!res.ok) return;
 	const { lastModified } = await res.json();
 	if (exerciseEdits === editsAtStart) {
@@ -115,7 +119,11 @@ export const syncRoutinesToServer = async () => {
 	}
 	const editsAtStart = routineEdits;
 	const all = await idb.getAll("routines");
-	const res = await fetch("/routines", { method: "POST", body: JSON.stringify(all) });
+	const res = await fetch("/routines", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(all),
+	});
 	if (!res.ok) return;
 	const { lastModified } = await res.json();
 	if (routineEdits === editsAtStart) await markSynced(ROUTINES_META, lastModified);
