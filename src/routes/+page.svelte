@@ -430,7 +430,18 @@
 
 <Nav onadd={() => (showAddPopup = true)}>
 	{#if !wide}
-		<SearchBar bind:value={searchString} />
+		<div class="flex gap-2">
+			<div class="flex-1 min-w-0">
+				<SearchBar bind:value={searchString} />
+			</div>
+			<button
+				onclick={() => (showAddPopup = true)}
+				aria-label="New exercise"
+				class="size-12 shrink-0 rounded-xl border-none bg-signal cursor-pointer flex items-center justify-center"
+			>
+				<i class="i-tabler-plus block size-[22px] text-[#111]"></i>
+			</button>
+		</div>
 		{@render routineChips(false)}
 	{/if}
 </Nav>

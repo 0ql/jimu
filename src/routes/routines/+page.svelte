@@ -77,6 +77,12 @@
 				{/if}
 			</span>
 		</div>
+		<button
+			onclick={() => openSheet(null)}
+			class="lg:hidden h-11 px-4 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-[#111] shrink-0"
+		>
+			<i class="i-tabler-plus block size-[18px] text-[#111]"></i>New
+		</button>
 	</header>
 
 	{#if !loaded}

@@ -6,6 +6,8 @@
 	import { dateStamp } from "$lib/sets";
 	import type { Snippet } from "svelte";
 
+	// The add button lives in the nav on desktop only; on phones each page puts it in its own
+	// content so the icon bar is the same on every tab and nothing shifts when switching.
 	let {
 		onadd = undefined,
 		addLabel = "New exercise",
@@ -114,12 +116,10 @@
 					<button
 						onclick={onadd}
 						aria-label={addLabel}
-						class="size-11 lg:size-auto lg:h-10 lg:px-4 ml-1 lg:ml-0 rounded-xl lg:rounded-[10px] border-none bg-signal cursor-pointer flex items-center justify-center gap-2"
+						class="hidden lg:flex h-10 px-4 rounded-[10px] border-none bg-signal cursor-pointer items-center justify-center gap-2"
 					>
-						<i class="i-tabler-plus block size-[22px] lg:size-[18px] text-[#111]"></i>
-						<span class="hidden lg:inline whitespace-nowrap text-[15px] font-semibold text-[#111]"
-							>{addLabel}</span
-						>
+						<i class="i-tabler-plus block size-[18px] text-[#111]"></i>
+						<span class="whitespace-nowrap text-[15px] font-semibold text-[#111]">{addLabel}</span>
 					</button>
 				{/if}
 			</div>
