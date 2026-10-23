@@ -1,9 +1,42 @@
 <script lang="ts">
+	import { invalidateAll } from "$app/navigation";
 	import { formatKg } from "$lib/sets";
+	import { toast } from "$lib/toast.svelte";
 	import Nav from "../Nav.svelte";
 	import type { PageProps } from "./$types";
 
 	let { data }: PageProps = $props();
+
+	// Role changes take two clicks: the first arms the button, the second sends it.
+	let pending: string | null = $state(null);
+	let busy = $state(false);
+
+	const changeRole = async (username: string, makeAdmin: boolean) => {
+		if (pending !== username) {
+			pending = username;
+			return;
+		}
+		busy = true;
+		try {
+			const res = await fetch("/admin", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json", Accept: "application/json" },
+				body: JSON.stringify({ username, isAdmin: makeAdmin }),
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				toast.error(body.message ?? "Couldn't change the role");
+				return;
+			}
+			toast.success(
+				makeAdmin ? `${username} is now an admin` : `${username} is no longer an admin`,
+			);
+			await invalidateAll();
+		} finally {
+			busy = false;
+			pending = null;
+		}
+	};
 
 	const DAY = 86_400_000;
 	const ago = (ms: number | null) => {
@@ -158,7 +191,8 @@
 						<th class="font-normal px-3 py-2 text-right">Days</th>
 						<th class="font-normal px-3 py-2 text-right">Sets</th>
 						<th class="font-normal px-3 py-2 text-right">Routines</th>
-						<th class="font-normal px-4 sm:px-5 py-2 text-right">Sessions</th>
+						<th class="font-normal px-3 py-2 text-right">Sessions</th>
+						<th class="font-normal px-4 sm:px-5 py-2 text-right">Role</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -187,9 +221,42 @@
 							<td class="px-3 py-2.5 font-mono text-[13px] text-right">{user.trainingDays}</td>
 							<td class="px-3 py-2.5 font-mono text-[13px] text-right">{formatKg(user.sets)}</td>
 							<td class="px-3 py-2.5 font-mono text-[13px] text-right">{user.routines}</td>
-							<td class="px-4 sm:px-5 py-2.5 font-mono text-[13px] text-right"
-								>{user.activeSessions}</td
-							>
+							<td class="px-3 py-2.5 font-mono text-[13px] text-right">{user.activeSessions}</td>
+							<td class="px-4 sm:px-5 py-1.5 text-right whitespace-nowrap">
+								{#if user.isMe}
+									<span class="text-xs text-faint">You</span>
+								{:else}
+									{@const armed = pending === user.username}
+									<span class="inline-flex items-center gap-1">
+										<button
+											onclick={() => changeRole(user.username, !user.isAdmin)}
+											disabled={busy}
+											class="h-8 px-3 rounded-lg border-none cursor-pointer text-xs font-semibold disabled:opacity-50 {armed
+												? user.isAdmin
+													? 'bg-destructive text-white'
+													: 'bg-signal text-[#111]'
+												: 'bg-surface-3 text-[#c9c9cf]'}"
+										>
+											{armed
+												? user.isAdmin
+													? "Confirm remove"
+													: "Confirm"
+												: user.isAdmin
+													? "Remove admin"
+													: "Make admin"}
+										</button>
+										{#if armed}
+											<button
+												onclick={() => (pending = null)}
+												aria-label="Cancel"
+												class="size-8 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center"
+											>
+												<i class="i-tabler-x block size-4 text-subtle"></i>
+											</button>
+										{/if}
+									</span>
+								{/if}
+							</td>
 						</tr>
 					{/each}
 				</tbody>

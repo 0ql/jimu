@@ -94,6 +94,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		return {
 			username: u.username,
 			isAdmin: u.isAdmin,
+			isMe: u.uuid === locals.user.uuid,
 			createdAt: u.createdAt?.getTime() ?? null,
 			lastSync: ex?.lastModified?.getTime() ?? null,
 			lastTrained,
