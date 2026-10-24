@@ -34,7 +34,7 @@
 
 	<section
 		transition:popupTransition
-		class="fixed z-40 bg-surface border-solid border-1 border-[#2a2a30] box-border overflow-y-auto
+		class="fixed z-40 bg-surface border-solid border-1 border-popup-edge box-border overflow-y-auto
 			{isMobile
 			? 'left-0 bottom-0 rounded-t-[22px] w-full max-h-[85dvh] px-5 pt-2 border-b-none'
 			: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md max-h-[85dvh] rounded-2xl px-6 py-5'}"
@@ -42,7 +42,7 @@
 	>
 		{#if isMobile}
 			<div class="flex justify-center pb-2">
-				<span class="w-10 h-[5px] rounded-full bg-[#3a3a41]"></span>
+				<span class="w-10 h-[5px] rounded-full bg-track"></span>
 			</div>
 		{/if}
 		<div class="flex justify-between items-center mb-2">

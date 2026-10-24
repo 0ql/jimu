@@ -29,6 +29,7 @@
 		previewHaptic,
 		type HapticStrength,
 	} from "$lib/haptics";
+	import { theme, THEMES } from "$lib/theme";
 
 	let { data } = $props();
 
@@ -208,11 +209,11 @@
 	const cardHead =
 		"m-0 px-4 pt-4 pb-1 font-display font-semibold text-[11px] tracking-[0.08em] uppercase text-subtle";
 	const row = "flex items-center gap-3 px-4 py-3.5 min-h-14";
-	const divider = "border-t-solid border-t-1 border-t-[#222227]";
+	const divider = "border-t-solid border-t-1 border-t-divider";
 	const secondaryBtn =
 		"h-10 px-3.5 rounded-[10px] border-none bg-surface-3 cursor-pointer flex items-center gap-2 text-sm shrink-0 disabled:opacity-50 disabled:cursor-default";
 	const field =
-		"h-[50px] w-full rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 text-base outline-none focus:border-signal placeholder:text-[#5a5a62]";
+		"h-[50px] w-full rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 text-base outline-none focus:border-signal-ink placeholder:text-placeholder";
 </script>
 
 <main
@@ -259,7 +260,7 @@
 				<h2 id="sync-head" class={cardHead}>Sync</h2>
 				<div class={row}>
 					{#if $synced}
-						<i class="i-tabler-cloud-check block size-5 text-green-400 shrink-0"></i>
+						<i class="i-tabler-cloud-check block size-5 text-ok shrink-0"></i>
 					{:else}
 						<i class="i-tabler-cloud-x block size-5 text-destructive shrink-0"></i>
 					{/if}
@@ -278,12 +279,37 @@
 				</div>
 				<dl class="m-0 {divider} px-4 py-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
 					<dt class="text-subtle">Exercises</dt>
-					<dd class="m-0 font-mono text-[13px] text-[#c9c9cf]">
+					<dd class="m-0 font-mono text-[13px] text-soft">
 						{$exercises.length} · {versionText(exerciseMeta)}
 					</dd>
 					<dt class="text-subtle">Routines</dt>
-					<dd class="m-0 font-mono text-[13px] text-[#c9c9cf]">{versionText(routineMeta)}</dd>
+					<dd class="m-0 font-mono text-[13px] text-soft">{versionText(routineMeta)}</dd>
 				</dl>
+			</section>
+
+			<section aria-labelledby="appearance-head" class={card}>
+				<h2 id="appearance-head" class={cardHead}>Appearance</h2>
+				<div class={row} role="group" aria-labelledby="theme-label">
+					<i class="i-tabler-palette block size-5 text-subtle shrink-0"></i>
+					<span id="theme-label" class="flex-1 min-w-0 flex flex-col">
+						<span class="font-semibold">Theme</span>
+						<span class="text-xs text-subtle">On this device</span>
+					</span>
+					<div
+						class="flex gap-1 p-1 rounded-xl bg-bg border-solid border-1 border-hairline shrink-0"
+					>
+						{#each THEMES as option}
+							<button
+								onclick={() => ($theme = option)}
+								aria-pressed={$theme === option}
+								class="h-8 px-2.5 rounded-lg border-none cursor-pointer text-[13px] font-semibold capitalize {$theme ===
+								option
+									? 'bg-dark text-bg'
+									: 'bg-transparent text-soft'}">{option}</button
+							>
+						{/each}
+					</div>
+				</div>
 			</section>
 
 			<section aria-labelledby="keypad-head" class={card}>
@@ -305,8 +331,8 @@
 						bind:checked={$hapticsEnabled}
 						onchange={(e) => e.currentTarget.checked && previewHaptic()}
 						disabled={!hapticsSupported}
-						class="appearance-none m-0 shrink-0 w-11 h-6.5 rounded-full bg-[#3a3a41] relative cursor-pointer transition-colors checked:bg-signal disabled:cursor-default
-							before:content-[''] before:absolute before:top-[3px] before:left-[3px] before:size-5 before:rounded-full before:bg-[#f2f1ec] before:transition-transform checked:before:translate-x-[18px] checked:before:bg-[#111]"
+						class="appearance-none m-0 shrink-0 w-11 h-6.5 rounded-full bg-track relative cursor-pointer transition-colors checked:bg-signal disabled:cursor-default
+							before:content-[''] before:absolute before:top-[3px] before:left-[3px] before:size-5 before:rounded-full before:bg-fg before:transition-transform checked:before:translate-x-[18px] checked:before:bg-on-signal"
 					/>
 				</label>
 				<div
@@ -334,7 +360,7 @@
 								class="h-8 px-2.5 rounded-lg border-none cursor-pointer text-[13px] font-semibold capitalize disabled:cursor-default {$hapticStrength ===
 								strength
 									? 'bg-dark text-bg'
-									: 'bg-transparent text-[#c9c9cf]'}">{strength}</button
+									: 'bg-transparent text-soft'}">{strength}</button
 							>
 						{/each}
 					</div>
@@ -344,7 +370,7 @@
 						role="status"
 						class="m-0 px-4 pb-3.5 -mt-1 text-xs leading-relaxed {vibrationTest.result
 							? 'text-subtle'
-							: 'text-[#ff8a8a]'}"
+							: 'text-danger'}"
 					>
 						{#if vibrationTest.result === true}
 							The browser accepted a {vibrationTest.ms} ms buzz. Felt nothing? Then the phone is dropping
@@ -370,7 +396,7 @@
 			>
 				<h2
 					id="danger-head"
-					class="m-0 px-4 pt-4 pb-1 font-display font-semibold text-[11px] tracking-[0.08em] uppercase text-[#ff8a8a]"
+					class="m-0 px-4 pt-4 pb-1 font-display font-semibold text-[11px] tracking-[0.08em] uppercase text-danger"
 				>
 					Danger zone
 				</h2>
@@ -383,9 +409,9 @@
 					</div>
 					<button
 						onclick={() => (showDeletePopup = true)}
-						class="h-10 px-3.5 rounded-[10px] border-none bg-[rgba(244,62,92,0.15)] cursor-pointer flex items-center gap-2 text-sm text-[#ff8a8a] shrink-0"
+						class="h-10 px-3.5 rounded-[10px] border-none bg-[rgba(244,62,92,0.15)] cursor-pointer flex items-center gap-2 text-sm text-danger shrink-0"
 					>
-						<i class="i-tabler-trash block size-4 text-[#ff8a8a]"></i>Delete…
+						<i class="i-tabler-trash block size-4 text-danger"></i>Delete…
 					</button>
 				</div>
 			</section>
@@ -404,7 +430,7 @@
 						bind:value={importText}
 						spellcheck="false"
 						placeholder={"Bizeps Kabel curl\n14.10. a10x12 27.5x10 x9 x7\n18.10. a10x12 30x10 x8 x7 d15x7\n\nBeinpress liegend\n18.10. a60x15 110x12 x12"}
-						class="w-full min-h-[9lh] max-h-[24lh] resize-y rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 py-3 font-mono text-sm leading-[1.6] outline-none focus:border-signal placeholder:text-[#5a5a62]"
+						class="w-full min-h-[9lh] max-h-[24lh] resize-y rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 py-3 font-mono text-sm leading-[1.6] outline-none focus:border-signal-ink placeholder:text-placeholder"
 					></textarea>
 					<div class="flex flex-wrap items-center justify-between gap-3">
 						<span class="font-mono text-xs text-subtle">
@@ -418,9 +444,9 @@
 						<button
 							onclick={importData}
 							disabled={!importBlocks.length}
-							class="h-11 px-4.5 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-[#111] disabled:opacity-40 disabled:cursor-default"
+							class="h-11 px-4.5 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-on-signal disabled:opacity-40 disabled:cursor-default"
 						>
-							<i class="i-tabler-file-import block size-[18px] text-[#111]"></i>Import
+							<i class="i-tabler-file-import block size-[18px] text-on-signal"></i>Import
 						</button>
 					</div>
 				</div>
@@ -431,20 +457,18 @@
 				<dl
 					class="m-0 px-4 pt-2 pb-4 grid grid-cols-[auto_1fr] gap-x-5 gap-y-2.5 items-baseline text-sm"
 				>
-					<dt class="font-mono text-[13px] text-signal">18.10.</dt>
-					<dd class="m-0 text-[#c9c9cf]">
+					<dt class="font-mono text-[13px] text-signal-ink">18.10.</dt>
+					<dd class="m-0 text-soft">
 						Each line starts with the day. Add a year when you like: 18.10.26 or 18.10.2026
 					</dd>
 					<dt class="font-mono text-[13px] text-fg">30x10</dt>
-					<dd class="m-0 text-[#c9c9cf]">
-						A working set: 30 kg for 10 reps. Decimals work: 27.5x10
-					</dd>
+					<dd class="m-0 text-soft">A working set: 30 kg for 10 reps. Decimals work: 27.5x10</dd>
 					<dt class="font-mono text-[13px] text-fg">x8</dt>
-					<dd class="m-0 text-[#c9c9cf]">Same weight as the set before, 8 reps</dd>
+					<dd class="m-0 text-soft">Same weight as the set before, 8 reps</dd>
 					<dt class="font-mono text-[13px] text-faint">a10x12</dt>
-					<dd class="m-0 text-[#c9c9cf]">Warm-up set, left out of volume</dd>
+					<dd class="m-0 text-soft">Warm-up set, left out of volume</dd>
 					<dt class="font-mono text-[13px] text-drop">d15x7</dt>
-					<dd class="m-0 text-[#c9c9cf]">Drop set, counted in volume</dd>
+					<dd class="m-0 text-soft">Drop set, counted in volume</dd>
 				</dl>
 			</section>
 		</div>
@@ -453,7 +477,7 @@
 
 <Popup title="Delete all exercises?" bind:showPopup={showDeletePopup}>
 	<div class="flex flex-col gap-4 pt-1">
-		<p class="text-sm text-[#c9c9cf]">
+		<p class="text-sm text-soft">
 			This removes all {$exercises.length} exercises and their logs from this device. A few seconds later
 			the automatic sync removes them from the server too, so this can't be undone.
 		</p>
@@ -535,7 +559,7 @@
 			<button
 				type="submit"
 				disabled={accountSaving}
-				class="flex-1 h-12 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-[#111] disabled:opacity-50"
+				class="flex-1 h-12 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-on-signal disabled:opacity-50"
 				>{accountSaving ? "Saving…" : "Save"}</button
 			>
 		</div>

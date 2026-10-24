@@ -49,8 +49,8 @@
 <nav
 	bind:this={navEl}
 	class="fixed left-0 right-0 top-0 z-30 px-4 lg:px-8 lg:pb-3.5 lg:[--nav-pt:1.25rem] bg-bg flex flex-col gap-3 {children
-		? '[--nav-pt:1rem] pb-3 border-b-solid border-b-1 border-b-[#1a1a1d]'
-		: '[--nav-pt:0px] lg:border-b-solid lg:border-b-1 lg:border-b-[#1a1a1d]'}"
+		? '[--nav-pt:1rem] pb-3 border-b-solid border-b-1 border-b-rule'
+		: '[--nav-pt:0px] lg:border-b-solid lg:border-b-1 lg:border-b-rule'}"
 	style="padding-top: calc(var(--nav-pt) + env(safe-area-inset-top))"
 >
 	<header class="hidden lg:flex items-center w-full max-w-[1376px] mx-auto">
@@ -61,7 +61,7 @@
 				class="flex h-10 px-3.5 rounded-[10px] items-center gap-2 no-underline text-[15px] {page.url
 					.pathname === '/'
 					? 'bg-surface-3 font-semibold'
-					: 'text-[#c9c9cf]'}"
+					: 'text-soft'}"
 			>
 				<i class="i-tabler-barbell block size-[18px]"></i>Exercises
 			</a>
@@ -75,9 +75,8 @@
 						? 'bg-surface-3'
 						: ''}"
 				>
-					<i class="{link.icon} block size-[18px] {active ? 'text-fg' : 'text-[#c9c9cf]'}"></i>
-					<span class="text-[15px] {active ? 'font-semibold' : 'text-[#c9c9cf]'}">{link.label}</span
-					>
+					<i class="{link.icon} block size-[18px] {active ? 'text-fg' : 'text-soft'}"></i>
+					<span class="text-[15px] {active ? 'font-semibold' : 'text-soft'}">{link.label}</span>
 				</a>
 			{/each}
 			<div class="flex items-center gap-3 ml-auto">
@@ -87,7 +86,7 @@
 					class="flex h-10 px-2 border-none bg-transparent cursor-pointer items-center gap-1.5 text-[13px] text-subtle"
 				>
 					{#if $synced}
-						<i class="i-tabler-cloud-check block size-4 text-green-400"></i>
+						<i class="i-tabler-cloud-check block size-4 text-ok"></i>
 						<span class="hidden xl:inline" aria-hidden="true">Synced</span>
 					{:else}
 						<i class="i-tabler-cloud-x block size-4 text-destructive"></i>
@@ -100,8 +99,10 @@
 						aria-label={addLabel}
 						class="flex h-10 px-4 rounded-[10px] border-none bg-signal cursor-pointer items-center justify-center gap-2"
 					>
-						<i class="i-tabler-plus block size-[18px] text-[#111]"></i>
-						<span class="whitespace-nowrap text-[15px] font-semibold text-[#111]">{addLabel}</span>
+						<i class="i-tabler-plus block size-[18px] text-on-signal"></i>
+						<span class="whitespace-nowrap text-[15px] font-semibold text-on-signal"
+							>{addLabel}</span
+						>
 					</button>
 				{/if}
 			</div>
@@ -114,7 +115,7 @@
 <nav
 	bind:this={tabsEl}
 	aria-label="Tabs"
-	class="lg:hidden fixed left-0 right-0 bottom-0 z-30 grid bg-[#111113] border-t-solid border-t-1 border-t-[#1f1f23]"
+	class="lg:hidden fixed left-0 right-0 bottom-0 z-30 grid bg-tabbar border-t-solid border-t-1 border-t-divider-2"
 	style="grid-template-columns: repeat({tabs.length}, minmax(0, 1fr)); padding-bottom: env(safe-area-inset-bottom)"
 >
 	{#each tabs as tab (tab.href)}
@@ -134,7 +135,7 @@
 				<i class="{tab.icon} block size-[26px]"></i>
 				{#if tab.href === "/settings" && !$synced}
 					<span
-						class="absolute -top-0.5 -right-1 size-2 rounded-full bg-destructive ring-2 ring-[#111113]"
+						class="absolute -top-0.5 -right-1 size-2 rounded-full bg-destructive ring-2 ring-tabbar"
 						title="Not synced"
 					></span>
 				{/if}

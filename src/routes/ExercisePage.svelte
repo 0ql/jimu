@@ -89,14 +89,14 @@
 	class="fixed inset-0 z-[35] bg-bg overflow-y-auto overscroll-contain flex flex-col"
 >
 	<header
-		class="sticky top-0 z-10 shrink-0 h-14 flex items-center gap-0.5 px-2 bg-bg border-b-solid border-b-1 border-b-[#1a1a1d]"
+		class="sticky top-0 z-10 shrink-0 h-14 flex items-center gap-0.5 px-2 bg-bg border-b-solid border-b-1 border-b-rule"
 	>
 		<button
 			onclick={back}
 			aria-label="Back to {backLabel}"
-			class="h-10 shrink-0 flex items-center gap-0.5 pl-1 pr-2.5 rounded-[10px] border-none bg-transparent cursor-pointer text-sm text-[#c9c9cf]"
+			class="h-10 shrink-0 flex items-center gap-0.5 pl-1 pr-2.5 rounded-[10px] border-none bg-transparent cursor-pointer text-sm text-soft"
 		>
-			<i class="i-tabler-chevron-left block size-[22px] text-[#c9c9cf]"></i>
+			<i class="i-tabler-chevron-left block size-[22px] text-soft"></i>
 			{#if !showPad}{backLabel}{/if}
 		</button>
 		<span class="flex-1 min-w-0 truncate text-base font-semibold">
@@ -107,14 +107,14 @@
 			aria-label="Progress chart"
 			class="size-10 shrink-0 rounded-[10px] flex items-center justify-center"
 		>
-			<i class="i-tabler-chart-line block size-5 text-[#c9c9cf]"></i>
+			<i class="i-tabler-chart-line block size-5 text-soft"></i>
 		</a>
 		<button
 			onclick={() => (showPopup = true)}
 			aria-label="Edit name and setup"
 			class="size-10 shrink-0 rounded-[10px] border-none bg-transparent cursor-pointer flex items-center justify-center"
 		>
-			<i class="i-tabler-pencil block size-5 text-[#c9c9cf]"></i>
+			<i class="i-tabler-pencil block size-5 text-soft"></i>
 		</button>
 	</header>
 
@@ -140,7 +140,7 @@
 				<label for="page-log-{exercise.id}" class="text-xs text-subtle"
 					>Log · one line per day</label
 				>
-				<span class="text-xs {editor.isToday ? 'text-signal' : 'text-faint'}">
+				<span class="text-xs {editor.isToday ? 'text-signal-ink' : 'text-faint'}">
 					{editor.isToday ? "today" : `last · ${editor.log.current.date ?? "—"}`}
 				</span>
 			</div>
@@ -156,9 +156,9 @@
 				autocomplete="off"
 				inputmode={editor.inputmode}
 				placeholder="{editor.stamp} a10x12 30x10 x8 x7 d15x7"
-				class="w-full min-h-[4lh] max-h-[8lh] overflow-y-auto resize-none rounded-[10px] border-solid border-[1.5px] bg-bg px-3 py-2.5 font-mono text-[15px] leading-[1.65] outline-none placeholder:text-[#5a5a62] {showPad
-					? 'border-signal'
-					: 'border-[#2e2e34] focus:border-signal'}"></textarea>
+				class="w-full min-h-[4lh] max-h-[8lh] overflow-y-auto resize-none rounded-[10px] border-solid border-[1.5px] bg-bg px-3 py-2.5 font-mono text-[15px] leading-[1.65] outline-none placeholder:text-placeholder {showPad
+					? 'border-signal-ink'
+					: 'border-edge focus:border-signal-ink'}"></textarea>
 
 			{#if !editor.touch || editor.textKeyboard}
 				<div class="flex gap-1.5">
@@ -166,20 +166,23 @@
 						onmousedown={keepFocus}
 						onclick={editor.addToday}
 						aria-label="Start today's line"
-						class="h-10 px-3 rounded-[10px] border-solid border-1 border-[#2e2e34] bg-surface-3 cursor-pointer flex items-center gap-1 font-mono text-sm {editor.isToday
+						class="h-10 px-3 rounded-[10px] border-solid border-1 border-edge bg-surface-3 cursor-pointer flex items-center gap-1 font-mono text-sm {editor.isToday
 							? 'text-faint'
-							: 'text-signal'}"
+							: 'text-signal-ink'}"
 					>
-						<i class="i-tabler-plus block size-3.5 {editor.isToday ? 'text-faint' : 'text-signal'}"
+						<i
+							class="i-tabler-plus block size-3.5 {editor.isToday
+								? 'text-faint'
+								: 'text-signal-ink'}"
 						></i>{editor.stamp}
 					</button>
 					{#if editor.textKeyboard}
 						<button
 							onmousedown={keepFocus}
 							onclick={() => editor.useSystemKeyboard(false)}
-							class="h-10 px-3 rounded-[10px] border-solid border-1 border-[#2e2e34] bg-surface-3 cursor-pointer flex items-center gap-1.5 text-sm text-[#c9c9cf]"
+							class="h-10 px-3 rounded-[10px] border-solid border-1 border-edge bg-surface-3 cursor-pointer flex items-center gap-1.5 text-sm text-soft"
 						>
-							<i class="i-tabler-dialpad block size-4 text-[#c9c9cf]"></i>
+							<i class="i-tabler-dialpad block size-4 text-soft"></i>
 							Set keypad
 						</button>
 					{/if}
@@ -207,7 +210,7 @@
 						class="{statValue} {editor.delta === null || editor.delta === 0
 							? 'text-subtle'
 							: editor.delta > 0
-								? 'text-signal'
+								? 'text-signal-ink'
 								: 'text-drop'}"
 					>
 						{editor.delta === null
@@ -235,7 +238,7 @@
 						<div
 							class="flex-1 min-w-0 rounded-t-[4px] {i === bars.length - 1
 								? 'bg-signal'
-								: 'bg-[#3a3a41]'}"
+								: 'bg-track'}"
 							style="height: {bar.height}px"
 						></div>
 					{/each}
@@ -251,11 +254,9 @@
 				</span>
 			</div>
 			{#each editor.history as entry}
-				<div class="flex items-baseline gap-3 py-2.5 border-t-solid border-t-1 border-t-[#222227]">
+				<div class="flex items-baseline gap-3 py-2.5 border-t-solid border-t-1 border-t-divider">
 					<span class="font-mono text-xs text-faint shrink-0 w-[60px]">{historyDate(entry)}</span>
-					<span class="flex-1 min-w-0 font-mono text-[13px] text-[#c9c9cf] truncate"
-						>{entry.rest}</span
-					>
+					<span class="flex-1 min-w-0 font-mono text-[13px] text-soft truncate">{entry.rest}</span>
 					<span class="font-mono text-xs text-subtle shrink-0">
 						{formatKg(lineStats(entry.sets).volume)}
 					</span>
@@ -268,7 +269,7 @@
 
 	{#if !showPad}
 		<footer
-			class="sticky bottom-0 shrink-0 flex items-center gap-2 px-3 pt-2.5 bg-[#141416] border-t-solid border-t-1 border-t-[#222227]"
+			class="sticky bottom-0 shrink-0 flex items-center gap-2 px-3 pt-2.5 bg-panel border-t-solid border-t-1 border-t-divider"
 			style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom))"
 		>
 			{#if routine}
@@ -276,32 +277,32 @@
 					onclick={() => routine.prev && go(routine.prev.id)}
 					disabled={!routine.prev}
 					aria-label={routine.prev ? `Previous: ${routine.prev.title}` : "No previous exercise"}
-					class="size-11 shrink-0 rounded-[10px] border-solid border-1 border-[#2e2e34] bg-surface-3 cursor-pointer flex items-center justify-center disabled:opacity-35 disabled:cursor-default"
+					class="size-11 shrink-0 rounded-[10px] border-solid border-1 border-edge bg-surface-3 cursor-pointer flex items-center justify-center disabled:opacity-35 disabled:cursor-default"
 				>
-					<i class="i-tabler-chevron-left block size-5 text-[#c9c9cf]"></i>
+					<i class="i-tabler-chevron-left block size-5 text-soft"></i>
 				</button>
 			{/if}
 			<button
 				onmousedown={keepFocus}
 				onclick={editor.addToday}
-				class="flex-1 min-w-0 h-11 rounded-[10px] border-none bg-signal cursor-pointer flex items-center justify-center gap-1.5 text-[15px] font-semibold text-[#111]"
+				class="flex-1 min-w-0 h-11 rounded-[10px] border-none bg-signal cursor-pointer flex items-center justify-center gap-1.5 text-[15px] font-semibold text-on-signal"
 			>
-				<i class="i-tabler-plus block size-[18px] text-[#111]"></i>Log sets
+				<i class="i-tabler-plus block size-[18px] text-on-signal"></i>Log sets
 			</button>
 			{#if routine}
 				{#if routine.next}
 					<button
 						onclick={() => go(routine.next!.id)}
 						aria-label="Next: {routine.next.title}"
-						class="h-11 max-w-[140px] shrink-0 pl-3 pr-2 rounded-[10px] border-solid border-1 border-[#2e2e34] bg-surface-3 cursor-pointer flex items-center gap-1 text-left"
+						class="h-11 max-w-[140px] shrink-0 pl-3 pr-2 rounded-[10px] border-solid border-1 border-edge bg-surface-3 cursor-pointer flex items-center gap-1 text-left"
 					>
 						<span class="min-w-0 flex flex-col leading-[1.15]">
 							<span class="text-[10px] text-faint"
 								>Next · {routine.position + 1}/{routine.total}</span
 							>
-							<span class="text-[13px] text-[#c9c9cf] truncate">{routine.next.title}</span>
+							<span class="text-[13px] text-soft truncate">{routine.next.title}</span>
 						</span>
-						<i class="i-tabler-chevron-right block size-[18px] shrink-0 text-[#c9c9cf]"></i>
+						<i class="i-tabler-chevron-right block size-[18px] shrink-0 text-soft"></i>
 					</button>
 				{:else}
 					<span class="h-11 shrink-0 px-3 flex items-center font-mono text-xs text-faint">

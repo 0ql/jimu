@@ -63,12 +63,12 @@
 			     so the layout below doesn't move between exercises. -->
 			<div class="h-6 flex items-center gap-2 min-w-0 overflow-hidden whitespace-nowrap">
 				{#if editor.note.trim()}
-					<span class="font-mono text-[13px] text-[#bdbdc4] truncate">{editor.note.trim()}</span>
-					<span class="text-[#4a4a52]" aria-hidden="true">·</span>
+					<span class="font-mono text-[13px] text-soft truncate">{editor.note.trim()}</span>
+					<span class="text-ghost" aria-hidden="true">·</span>
 				{/if}
 				{#each tags as tag (tag.id)}
 					<span
-						class="h-6 shrink-0 px-2.5 rounded-full border-solid border-1 border-[#2e2e34] text-xs font-semibold text-[#c9c9cf] flex items-center"
+						class="h-6 shrink-0 px-2.5 rounded-full border-solid border-1 border-edge text-xs font-semibold text-soft flex items-center"
 						>{tag.name}</span
 					>
 				{/each}
@@ -102,7 +102,7 @@
 				<label for="desk-log-{exercise.id}" class="text-[13px] text-subtle"
 					>Log · one line per day</label
 				>
-				<span class="font-mono text-xs text-[#7c7c85]">a warm-up · d drop set · x8 same kg</span>
+				<span class="font-mono text-xs text-dim">a warm-up · d drop set · x8 same kg</span>
 			</div>
 			<textarea
 				id="desk-log-{exercise.id}"
@@ -116,21 +116,21 @@
 				autocomplete="off"
 				inputmode={editor.inputmode}
 				placeholder="{editor.stamp} a10x12 30x10 x8 x7 d15x7"
-				class="w-full min-h-[6lh] max-h-[16lh] overflow-y-auto resize-y rounded-[10px] border-solid border-[1.5px] border-signal bg-bg px-3.5 py-3 font-mono text-base leading-[1.7] outline-none placeholder:text-[#5a5a62]"
+				class="w-full min-h-[6lh] max-h-[16lh] overflow-y-auto resize-y rounded-[10px] border-solid border-[1.5px] border-signal-ink bg-bg px-3.5 py-3 font-mono text-base leading-[1.7] outline-none placeholder:text-placeholder"
 			></textarea>
 			<div class="flex flex-wrap items-center gap-2">
 				<button
 					onclick={editor.addToday}
-					class="h-[34px] px-3 rounded-lg border-solid border-1 border-[#2e2e34] bg-surface-3 cursor-pointer font-mono text-[13px] {editor.isToday
+					class="h-[34px] px-3 rounded-lg border-solid border-1 border-edge bg-surface-3 cursor-pointer font-mono text-[13px] {editor.isToday
 						? 'text-faint'
-						: 'text-signal'}">+ {editor.stamp}</button
+						: 'text-signal-ink'}">+ {editor.stamp}</button
 				>
-				<span class="text-xs text-[#7c7c85]">
+				<span class="text-xs text-dim">
 					or press <kbd>Ctrl</kbd> <kbd>Enter</kbd> to start today's line
 				</span>
 			</div>
 
-			<div class="flex flex-col gap-2 pt-2.5 border-t-solid border-t-1 border-t-[#222227]">
+			<div class="flex flex-col gap-2 pt-2.5 border-t-solid border-t-1 border-t-divider">
 				<span class="text-xs text-subtle">
 					{editor.isToday ? "Today · parsed" : `Last · ${editor.log.current.date ?? "—"}`}
 				</span>
@@ -162,7 +162,7 @@
 						class="{statValue} {editor.delta === null || editor.delta === 0
 							? 'text-subtle'
 							: editor.delta > 0
-								? 'text-signal'
+								? 'text-signal-ink'
 								: 'text-drop'}"
 					>
 						{editor.delta === null
@@ -195,16 +195,16 @@
 						{#each bars as bar, i}
 							{@const latest = i === bars.length - 1}
 							<div class="flex-1 min-w-0 h-full flex flex-col justify-end items-center gap-1">
-								<span class="font-mono text-[10px] {latest ? 'text-fg' : 'text-[#7c7c85]'}"
+								<span class="font-mono text-[10px] {latest ? 'text-fg' : 'text-dim'}"
 									>{formatKg(bar.volume)}</span
 								>
 								<div
 									class="w-full max-w-9 rounded-t-[5px] rounded-b-[2px] {latest
 										? 'bg-signal'
-										: 'bg-[#3a3a41]'}"
+										: 'bg-track'}"
 									style="height: {bar.height}px"
 								></div>
-								<span class="font-mono text-[10px] text-[#7c7c85]">{bar.date}</span>
+								<span class="font-mono text-[10px] text-dim">{bar.date}</span>
 							</div>
 						{/each}
 					</div>
@@ -217,10 +217,9 @@
 			>
 				<h2 class="m-0 mb-1.5 text-[15px] font-semibold">History</h2>
 				{#each editor.history as entry}
-					<div class="flex items-baseline gap-3 py-2 border-t-solid border-t-1 border-t-[#222227]">
+					<div class="flex items-baseline gap-3 py-2 border-t-solid border-t-1 border-t-divider">
 						<span class="font-mono text-xs text-faint shrink-0">{historyDate(entry)}</span>
-						<span class="flex-1 min-w-0 font-mono text-[13px] text-[#c9c9cf] truncate"
-							>{entry.rest}</span
+						<span class="flex-1 min-w-0 font-mono text-[13px] text-soft truncate">{entry.rest}</span
 						>
 						<span class="font-mono text-xs text-subtle shrink-0">
 							{formatKg(lineStats(entry.sets).volume)} kg

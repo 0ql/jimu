@@ -139,7 +139,7 @@
 					x2={PAD.left + innerW}
 					y1={y(tick)}
 					y2={y(tick)}
-					stroke="#26262b"
+					class="stroke-hairline"
 					stroke-width="1"
 				/>
 				<text
@@ -147,23 +147,20 @@
 					y={y(tick)}
 					text-anchor="end"
 					dominant-baseline="middle"
-					class="fill-[#7c7c85] font-mono text-[11px]">{tickText(tick)}</text
+					class="fill-dim font-mono text-[11px]">{tickText(tick)}</text
 				>
 			{/each}
 			{#each xTicks as tick}
-				<text
-					x={tick.cx}
-					y={HEIGHT - 8}
-					text-anchor="middle"
-					class="fill-[#7c7c85] font-mono text-[11px]">{tick.text}</text
+				<text x={tick.cx} y={HEIGHT - 8} text-anchor="middle" class="fill-dim font-mono text-[11px]"
+					>{tick.text}</text
 				>
 			{/each}
 
-			<path d={area} fill="#d7f55a" fill-opacity="0.1" />
+			<path d={area} class="fill-signal" fill-opacity="0.1" />
 			<path
 				d={line}
 				fill="none"
-				stroke="#d7f55a"
+				class="stroke-signal-ink"
 				stroke-width="2"
 				stroke-linejoin="round"
 				stroke-linecap="round"
@@ -171,17 +168,29 @@
 
 			{#if showDots}
 				{#each coords as c}
-					<circle cx={c.cx} cy={c.cy} r="4" fill="#d7f55a" stroke="#17171a" stroke-width="2" />
+					<circle
+						cx={c.cx}
+						cy={c.cy}
+						r="4"
+						class="fill-signal-ink stroke-surface"
+						stroke-width="2"
+					/>
 				{/each}
 			{:else if last}
-				<circle cx={last.cx} cy={last.cy} r="4" fill="#d7f55a" stroke="#17171a" stroke-width="2" />
+				<circle
+					cx={last.cx}
+					cy={last.cy}
+					r="4"
+					class="fill-signal-ink stroke-surface"
+					stroke-width="2"
+				/>
 			{/if}
 			{#if last && !current}
 				<text
 					x={last.cx + 10}
 					y={last.cy}
 					dominant-baseline="middle"
-					class="fill-[#f2f1ec] font-mono text-xs font-medium">{format(last.value)}</text
+					class="fill-fg font-mono text-xs font-medium">{format(last.value)}</text
 				>
 			{/if}
 
@@ -191,15 +200,14 @@
 					x2={current.cx}
 					y1={PAD.top}
 					y2={PAD.top + innerH}
-					stroke="#55555e"
+					class="stroke-ghost"
 					stroke-width="1"
 				/>
 				<circle
 					cx={current.cx}
 					cy={current.cy}
 					r="6"
-					fill="#d7f55a"
-					stroke="#17171a"
+					class="fill-signal-ink stroke-surface"
 					stroke-width="2"
 				/>
 			{/if}
@@ -207,7 +215,7 @@
 
 		{#if current}
 			<div
-				class="pointer-events-none absolute z-10 min-w-[160px] max-w-[260px] px-3 py-2 rounded-lg bg-[#232328] border-solid border-1 border-[#34343b] shadow-lg flex flex-col gap-0.5"
+				class="pointer-events-none absolute z-10 min-w-[160px] max-w-[260px] px-3 py-2 rounded-lg bg-surface-3 border-solid border-1 border-edge-2 shadow-lg flex flex-col gap-0.5"
 				style="left: {Math.min(Math.max(current.cx, 90), width - 90)}px; top: {Math.max(
 					current.cy - 12,
 					0,
@@ -215,7 +223,7 @@
 			>
 				<span class="font-semibold text-[15px]">{format(current.value)}</span>
 				<span class="text-xs text-subtle">{dateText(current.date)}</span>
-				<span class="font-mono text-xs text-[#c9c9cf] truncate">{current.detail}</span>
+				<span class="font-mono text-xs text-soft truncate">{current.detail}</span>
 			</div>
 		{/if}
 	{/if}

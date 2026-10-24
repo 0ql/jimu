@@ -114,9 +114,9 @@
 
 	const tokenClass: Record<ParsedSet["kind"], string> = {
 		warmup: "text-faint",
-		work: "text-[#c9c9cf]",
+		work: "text-soft",
 		drop: "text-drop",
-		invalid: "text-[#ff9b9b]",
+		invalid: "text-invalid",
 	};
 
 	const dateLabel = (d: Date) =>
@@ -221,7 +221,7 @@
 				</p>
 				<a
 					href="/"
-					class="h-12 px-4.5 rounded-xl bg-signal no-underline flex items-center gap-2 text-[15px] font-semibold text-[#111]"
+					class="h-12 px-4.5 rounded-xl bg-signal no-underline flex items-center gap-2 text-[15px] font-semibold text-on-signal"
 					>Go to exercises</a
 				>
 			</div>
@@ -258,17 +258,17 @@
 								</span>
 							</div>
 						</header>
-						<ul class="m-0 p-0 list-none border-t-solid border-t-1 border-t-[#222227]">
+						<ul class="m-0 p-0 list-none border-t-solid border-t-1 border-t-divider">
 							{#each session.entries as entry (entry.id)}
 								<li
-									class="flex flex-wrap sm:flex-nowrap items-baseline gap-x-3 gap-y-0.5 px-4 py-2.5 border-b-solid border-b-1 border-b-[#1c1c20] last:border-b-0"
+									class="flex flex-wrap sm:flex-nowrap items-baseline gap-x-3 gap-y-0.5 px-4 py-2.5 border-b-solid border-b-1 border-b-lift last:border-b-0"
 								>
 									<a
 										href="/?exercise={entry.id}"
-										class="sm:w-[38%] shrink-0 min-w-0 truncate no-underline text-[15px] font-semibold hover:text-signal"
+										class="sm:w-[38%] shrink-0 min-w-0 truncate no-underline text-[15px] font-semibold hover:text-signal-ink"
 										>{entry.title}</a
 									>
-									<span class="flex-1 min-w-0 font-mono text-[13px] text-[#c9c9cf] truncate">
+									<span class="flex-1 min-w-0 font-mono text-[13px] text-soft truncate">
 										{#each entry.tokens as token, i}{#if i}&ensp;{/if}<span
 												class={tokenClass[token.kind]}>{token.text}</span
 											>{/each}

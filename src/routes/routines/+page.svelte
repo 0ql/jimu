@@ -78,9 +78,9 @@
 		</div>
 		<button
 			onclick={() => openSheet(null)}
-			class="lg:hidden h-11 px-4 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-[#111] shrink-0"
+			class="lg:hidden h-11 px-4 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-on-signal shrink-0"
 		>
-			<i class="i-tabler-plus block size-[18px] text-[#111]"></i>New
+			<i class="i-tabler-plus block size-[18px] text-on-signal"></i>New
 		</button>
 	</header>
 
@@ -96,9 +96,9 @@
 			</p>
 			<button
 				onclick={() => openSheet(null)}
-				class="h-12 px-4.5 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-[#111]"
+				class="h-12 px-4.5 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-on-signal"
 			>
-				<i class="i-tabler-plus block size-[18px] text-[#111]"></i>
+				<i class="i-tabler-plus block size-[18px] text-on-signal"></i>
 				Create your first routine
 			</button>
 		</div>
@@ -119,12 +119,12 @@
 						</div>
 						{#if card.items.length > 0}
 							<div class="flex flex-col items-end gap-1.5 shrink-0">
-								<span class="font-mono text-xs {card.done ? 'text-signal' : 'text-subtle'}"
+								<span class="font-mono text-xs {card.done ? 'text-signal-ink' : 'text-subtle'}"
 									>{card.done}/{card.items.length} today</span
 								>
 								<div class="flex gap-[3px]" aria-hidden="true">
 									{#each card.items as item}
-										<span class="w-2 h-4 rounded-[2px] {item.done ? 'bg-signal' : 'bg-[#2e2e34]'}"
+										<span class="w-2 h-4 rounded-[2px] {item.done ? 'bg-signal' : 'bg-edge'}"
 										></span>
 									{/each}
 								</div>
@@ -134,16 +134,14 @@
 
 					{#if card.items.length > 0}
 						<ul
-							class="m-0 p-0 list-none flex flex-col rounded-xl bg-bg border-solid border-1 border-[#1f1f23]"
+							class="m-0 p-0 list-none flex flex-col rounded-xl bg-bg border-solid border-1 border-divider-2"
 						>
 							{#each card.items.slice(0, MAX_LISTED) as item (item.id)}
 								<li
-									class="flex items-center gap-2.5 px-3 py-2 border-b-solid border-b-1 border-b-[#1a1a1d] last:border-b-0"
+									class="flex items-center gap-2.5 px-3 py-2 border-b-solid border-b-1 border-b-rule last:border-b-0"
 								>
 									<span
-										class="size-[7px] rounded-full shrink-0 {item.done
-											? 'bg-signal'
-											: 'bg-[#2e2e34]'}"
+										class="size-[7px] rounded-full shrink-0 {item.done ? 'bg-signal' : 'bg-edge'}"
 									></span>
 									<span class="flex-1 min-w-0 truncate text-sm">{item.title}</span>
 									<span class="font-mono text-xs text-subtle shrink-0">{item.top}</span>
@@ -162,9 +160,9 @@
 					<div class="flex gap-2">
 						<a
 							href="/?routine={card.routine.id}"
-							class="flex-1 h-11 rounded-xl bg-signal no-underline flex items-center justify-center gap-2 text-[15px] font-semibold text-[#111]"
+							class="flex-1 h-11 rounded-xl bg-signal no-underline flex items-center justify-center gap-2 text-[15px] font-semibold text-on-signal"
 						>
-							<i class="i-tabler-player-play block size-4 text-[#111]"></i>Train
+							<i class="i-tabler-player-play block size-4 text-on-signal"></i>Train
 						</a>
 						<button
 							onclick={() => openSheet(card.routine)}

@@ -80,12 +80,12 @@
 	<button
 		type="submit"
 		disabled={loading}
-		class="h-12 mt-1 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-[#111] disabled:opacity-60 disabled:cursor-default"
+		class="h-12 mt-1 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-on-signal disabled:opacity-60 disabled:cursor-default"
 	>
 		{loading ? "Creating account…" : "Create account"}
 	</button>
 	{#snippet footer()}
-		Already have an account? <a href="/login" class="font-semibold no-underline text-signal"
+		Already have an account? <a href="/login" class="font-semibold no-underline text-signal-ink"
 			>Log in</a
 		>
 	{/snippet}

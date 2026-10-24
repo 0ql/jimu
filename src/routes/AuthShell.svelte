@@ -20,7 +20,7 @@
 <main class="h-[100dvh] overflow-y-auto flex flex-col items-center justify-center gap-8 py-6">
 	<div class="flex flex-col items-center gap-2 text-center">
 		<span class="font-display font-semibold text-[44px] leading-none tracking-[-0.02em]"
-			>jimu<span class="text-signal">.</span></span
+			>jimu<span class="text-signal-ink">.</span></span
 		>
 		<span class="font-mono text-[13px] text-subtle">
 			<span class="text-faint">18.10.</span>
@@ -40,9 +40,9 @@
 		{#if error}
 			<p
 				role="alert"
-				class="m-0 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-[rgba(244,62,92,0.12)] text-sm text-[#ff8a8a]"
+				class="m-0 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-[rgba(244,62,92,0.12)] text-sm text-danger"
 			>
-				<i class="i-tabler-alert-circle block size-[18px] shrink-0 mt-px text-[#ff8a8a]"></i>
+				<i class="i-tabler-alert-circle block size-[18px] shrink-0 mt-px text-danger"></i>
 				{error}
 			</p>
 		{/if}

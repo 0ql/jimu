@@ -5,7 +5,7 @@
 	const styles = {
 		success: {
 			icon: "i-tabler-circle-check",
-			color: "border-accent text-green-400",
+			color: "border-accent text-ok",
 		},
 		error: {
 			icon: "i-tabler-circle-x",

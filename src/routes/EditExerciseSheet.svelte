@@ -50,7 +50,7 @@
 				spellcheck="false"
 				bind:value={editor.title}
 				onchange={editor.save}
-				class="h-[50px] w-full rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 text-[17px] font-semibold outline-none focus:border-signal"
+				class="h-[50px] w-full rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 text-[17px] font-semibold outline-none focus:border-signal-ink"
 			/>
 		</div>
 
@@ -63,7 +63,7 @@
 				bind:value={editor.note}
 				onchange={editor.save}
 				placeholder="Sitz 3, Rolle 2"
-				class="h-[50px] w-full rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 font-mono text-[15px] outline-none focus:border-signal placeholder:text-[#5a5a62]"
+				class="h-[50px] w-full rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 font-mono text-[15px] outline-none focus:border-signal-ink placeholder:text-placeholder"
 			/>
 		</div>
 
@@ -75,13 +75,13 @@
 						{@const checked = inRoutine(routine)}
 						<label
 							class="h-10 pl-2.5 pr-3.5 rounded-full flex items-center gap-2 text-sm font-semibold cursor-pointer border-solid border-1
-								{checked ? 'bg-dark border-dark text-bg' : 'border-[#2e2e34] text-[#c9c9cf]'}"
+								{checked ? 'bg-dark border-dark text-bg' : 'border-edge text-soft'}"
 						>
 							<input
 								type="checkbox"
 								{checked}
 								onchange={() => toggleRoutine(routine)}
-								class="m-0 size-4 accent-[#111]"
+								class="m-0 size-4 accent-on-signal"
 							/>
 							{routine.name}
 						</label>
@@ -93,7 +93,7 @@
 		<div class="flex flex-col rounded-2xl border-solid border-1 border-hairline overflow-hidden">
 			<a
 				href="/analytics?exercise={exercise.id}"
-				class="flex items-center gap-3 min-h-13 px-3.5 no-underline border-b-solid border-b-1 border-b-[#222227]"
+				class="flex items-center gap-3 min-h-13 px-3.5 no-underline border-b-solid border-b-1 border-b-divider"
 			>
 				<i class="i-tabler-chart-bar block size-5"></i>
 				<span class="flex-1">Progress chart</span>
@@ -105,17 +105,16 @@
 				onclick={remove}
 				class="flex items-center gap-3 min-h-13 px-3.5 border-none bg-transparent cursor-pointer text-left text-base {confirmDelete
 					? 'bg-destructive text-white'
-					: 'text-[#ff8a8a]'}"
+					: 'text-danger'}"
 			>
-				<i class="i-tabler-trash block size-5 {confirmDelete ? 'text-white' : 'text-[#ff8a8a]'}"
-				></i>
+				<i class="i-tabler-trash block size-5 {confirmDelete ? 'text-white' : 'text-danger'}"></i>
 				{confirmDelete ? "Tap again to delete" : "Delete exercise…"}
 			</button>
 		</div>
 
 		<button
 			onclick={() => (showPopup = false)}
-			class="h-12 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-[#111]"
+			class="h-12 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-on-signal"
 		>
 			Done
 		</button>

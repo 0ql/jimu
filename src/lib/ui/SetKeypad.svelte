@@ -137,15 +137,15 @@
 
 	const key =
 		"h-full rounded-[10px] cursor-pointer flex items-center justify-center select-none touch-manipulation";
-	const digit = `${key} border-none bg-[#2c2c30] text-[24px] font-medium`;
-	const symbol = `${key} border-none bg-surface-3 font-mono text-[20px] text-[#c9c9cf]`;
+	const digit = `${key} border-none bg-keycap text-[24px] font-medium`;
+	const symbol = `${key} border-none bg-surface-3 font-mono text-[20px] text-soft`;
 </script>
 
 <div
 	bind:clientHeight={height}
 	role="group"
 	aria-label="Set keypad for {title}"
-	class="fixed left-0 right-0 bottom-0 z-30 bg-[#141416] border-t-solid border-t-1 border-t-hairline"
+	class="fixed left-0 right-0 bottom-0 z-30 bg-panel border-t-solid border-t-1 border-t-hairline"
 	style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom))"
 >
 	<!--
@@ -176,7 +176,7 @@
 			aria-label="Backspace"
 			class="{symbol} col-span-2"
 		>
-			<i class="i-tabler-backspace block size-6 text-[#c9c9cf]"></i>
+			<i class="i-tabler-backspace block size-6 text-soft"></i>
 		</button>
 
 		{#each ["4", "5", "6"] as const as k}
@@ -186,7 +186,7 @@
 			onmousedown={keepFocus}
 			{...press("a")}
 			aria-label="Warm-up set"
-			class="{key} bg-transparent border-dashed border-1 border-[#4a4a52] font-mono text-[20px] text-[#c9c9cf]"
+			class="{key} bg-transparent border-dashed border-1 border-ghost font-mono text-[20px] text-soft"
 			>a</button
 		>
 		<button
@@ -206,7 +206,7 @@
 			{...lit}
 			onclick={onabc}
 			aria-label="Switch to full keyboard"
-			class="{key} border-none bg-surface-3 text-sm font-semibold text-[#c9c9cf]">abc</button
+			class="{key} border-none bg-surface-3 text-sm font-semibold text-soft">abc</button
 		>
 
 		<button onmousedown={keepFocus} {...press(".")} aria-label="Decimal point" class={digit}
@@ -214,15 +214,15 @@
 		>
 		<button onmousedown={keepFocus} {...press("0")} class={digit}>0</button>
 		<button onmousedown={keepFocus} {...press("enter")} aria-label="New line" class={symbol}>
-			<i class="i-tabler-corner-down-left block size-6 text-[#c9c9cf]"></i>
+			<i class="i-tabler-corner-down-left block size-6 text-soft"></i>
 		</button>
 		<button
 			onmousedown={keepFocus}
 			{...press("today")}
 			aria-label="Start today's line"
-			class="{symbol} col-span-2 gap-1 text-[15px] {todayDone ? 'text-faint' : 'text-signal'}"
+			class="{symbol} col-span-2 gap-1 text-[15px] {todayDone ? 'text-faint' : 'text-signal-ink'}"
 		>
-			<i class="i-tabler-plus block size-4 {todayDone ? 'text-faint' : 'text-signal'}"></i>
+			<i class="i-tabler-plus block size-4 {todayDone ? 'text-faint' : 'text-signal-ink'}"></i>
 			{todayLabel}
 		</button>
 
@@ -232,7 +232,7 @@
 			aria-label="Space"
 			class="{symbol} col-span-3"
 		>
-			<i class="i-tabler-space block size-6 text-[#c9c9cf]"></i>
+			<i class="i-tabler-space block size-6 text-soft"></i>
 		</button>
 		<button
 			onmousedown={keepFocus}
@@ -256,7 +256,7 @@
 	}
 	button:global([data-pressed]) {
 		transform: scale(0.93);
-		box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.3);
+		box-shadow: inset 0 0 0 100px var(--press);
 		transition: none;
 	}
 	@media (prefers-reduced-motion: reduce) {

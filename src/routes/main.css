@@ -62,17 +62,119 @@
 	--shadow-card: 0px 2px 0px 1px #0006;
 	--shadow-date-field-focus: 0px 0px 0px 3px #f4f4f51a;
 
-	/* ── Logbook ── */
+	/* ── Logbook: the night theme (default) ── */
 	--signal: #d7f55a;
+	/* Lime as text or an outline; the same lime here, darker where the page is light. */
+	--signal-ink: #d7f55a;
+	--on-signal: #111;
 	--surface: #17171a;
 	--surface-2: #1e1e22;
 	--surface-3: #232328;
 	--hairline: #26262b;
 	--subtle: #9a9aa2;
 	--faint: #6e6e77;
+	--dim: #7c7c85;
+	--soft: #c9c9cf;
+	--strong: #e2e2e6;
+	--placeholder: #5a5a62;
+	--edge: #2e2e34;
+	--edge-2: #34343b;
+	--divider: #222227;
+	--divider-2: #1f1f23;
+	--rule: #1a1a1d;
+	--track: #3a3a41;
+	--ghost: #4a4a52;
+	--lift: #1c1c20;
+	--raised: #26262c;
+	--selected: #32323a;
+	--panel: #141416;
+	--tabbar: #111113;
+	--keycap: #2c2c30;
+	--popup-edge: #2a2a30;
+	--press: rgba(255, 255, 255, 0.3);
+	--danger: #ff8a8a;
+	--invalid: #ff9b9b;
+	--invalid-border: #e05a5a;
+	--ok: #4ade80;
 	--drop: #ffb088;
 	--drop-bg: rgba(255, 138, 76, 0.12);
 	--drop-border: rgba(255, 138, 76, 0.45);
+	color-scheme: dark;
+}
+
+/* Dark: the same layout a few steps lighter than night, softer on the eyes in a lit room. */
+:root[data-theme="dark"] {
+	--background: #1b1b1e;
+	--foreground: #f2f2f2;
+	--dark: #f5f5f5;
+	--surface: #242428;
+	--surface-2: #2b2b30;
+	--surface-3: #313137;
+	--hairline: #333339;
+	--subtle: #a6a6ae;
+	--faint: #7f7f88;
+	--dim: #8c8c95;
+	--soft: #d2d2d8;
+	--strong: #e8e8ec;
+	--placeholder: #6c6c75;
+	--edge: #3b3b42;
+	--edge-2: #44444c;
+	--divider: #303036;
+	--divider-2: #2d2d33;
+	--rule: #2a2a2f;
+	--track: #4a4a52;
+	--ghost: #5d5d66;
+	--lift: #2a2a2f;
+	--raised: #34343b;
+	--selected: #3f3f47;
+	--panel: #212125;
+	--tabbar: #1f1f22;
+	--keycap: #38383f;
+	--popup-edge: #3a3a41;
+}
+
+/* Light: warm off-white page, white cards, lime kept for fills with a darker olive for text. */
+:root[data-theme="light"] {
+	--background: #f3f3ef;
+	--foreground: #17171a;
+	--dark: #17171a;
+	--destructive: #e0344f;
+	--signal: #d7f55a;
+	--signal-ink: #5b7a00;
+	--on-signal: #111;
+	--surface: #ffffff;
+	--surface-2: #f4f4f0;
+	--surface-3: #ebebe6;
+	--hairline: #e2e2dc;
+	--subtle: #696970;
+	--faint: #8d8d94;
+	--dim: #7b7b82;
+	--soft: #3d3d44;
+	--strong: #26262b;
+	--placeholder: #a3a3aa;
+	--edge: #d8d8d1;
+	--edge-2: #cbcbc4;
+	--divider: #ecece6;
+	--divider-2: #efefe9;
+	--rule: #e2e2dc;
+	--track: #d3d3cc;
+	--ghost: #b4b4ad;
+	--lift: #f1f1ec;
+	--raised: #f0f0ea;
+	--selected: #e7e7e0;
+	--panel: #dcdcd5;
+	--tabbar: #fbfbf9;
+	--keycap: #ffffff;
+	--popup-edge: #e0e0da;
+	--press: rgba(0, 0, 0, 0.12);
+	--danger: #cf3346;
+	--invalid: #c23a3a;
+	--invalid-border: #d65252;
+	--ok: #16a34a;
+	--drop: #b8541c;
+	--drop-bg: rgba(255, 138, 76, 0.14);
+	--drop-border: rgba(214, 102, 44, 0.5);
+	color-scheme: light;
 }
 
 html {
@@ -111,14 +213,13 @@ kbd {
 	font-size: 11px;
 	padding: 2px 6px;
 	border-radius: 5px;
-	border: 1px solid #34343b;
+	border: 1px solid var(--edge-2);
 	background: var(--surface-2);
-	color: #c9c9cf;
+	color: var(--soft);
 }
 
 /* ── Scrollbars: thin and dark to match the surfaces ── */
 html {
-	color-scheme: dark;
 	/* Always reserve the scrollbar's space, so pages that don't scroll are as wide as pages
 	   that do and nothing jumps sideways when switching tabs. */
 	scrollbar-gutter: stable;
@@ -126,7 +227,7 @@ html {
 
 * {
 	scrollbar-width: thin;
-	scrollbar-color: #3a3a41 transparent;
+	scrollbar-color: var(--track) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -139,12 +240,12 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-	background: #3a3a41;
+	background: var(--track);
 	border-radius: 999px;
 	border: 3px solid transparent;
 	background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background-color: #55555e;
+	background-color: var(--ghost);
 }

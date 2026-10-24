@@ -21,7 +21,7 @@
 		ROUTINES_META,
 		saveRoutine,
 	} from "./idb";
-	import { dateStamp, daysAgo, formatKg, isTodayLine, lineStats, parseLog } from "$lib/sets";
+	import { dateStamp, daysAgo, isTodayLine, parseLog } from "$lib/sets";
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
 
@@ -45,6 +45,8 @@
 	let selectedRoutineId: number | null = $state(null);
 	// Rows copy their exercise into local state, so remount them after a pull from the server.
 	let pullCount = $state(0);
+	// Height of the routine chips bar on phones, so the list's end clears it.
+	let chipsHeight = $state(0);
 	// Empty states wait for IndexedDB so they don't flash on every visit.
 	let loaded = $state(false);
 
@@ -256,18 +258,6 @@
 		}
 	};
 
-	const today = $derived.by(() => {
-		const names: string[] = [];
-		let volume = 0;
-		for (const exercise of $exercises) {
-			const { current } = parseLog(exercise.workoutsString);
-			if (!isTodayLine(current) || current.sets.length === 0) continue;
-			names.push(exercise.title);
-			volume += lineStats(current.sets).volume;
-		}
-		return { names, volume };
-	});
-
 	/** Opens the new-exercise prompt; a name from search is prefilled so only the setup is left. */
 	const openAdd = async (name = "") => {
 		newTitle = name.trim();
@@ -301,31 +291,12 @@
 
 <svelte:window onkeydown={onWindowKey} />
 
-{#snippet todayCard()}
-	{#if today.names.length > 0}
-		<section
-			class="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-surface border-solid border-1 border-hairline"
-		>
-			<span class="size-2 rounded-full bg-signal shrink-0"></span>
-			<div class="flex-1 min-w-0 flex flex-col gap-0.5">
-				<span class="text-xs text-subtle">
-					Today · {today.names.length} exercise{today.names.length === 1 ? "" : "s"}
-				</span>
-				<span class="text-sm truncate">{today.names.join(", ")}</span>
-			</div>
-			<span class="font-display font-semibold text-[18px] whitespace-nowrap">
-				{formatKg(today.volume)} kg
-			</span>
-		</section>
-	{/if}
-{/snippet}
-
 {#snippet createButton()}
 	<button
 		onclick={createFromSearch}
-		class="h-12 px-4.5 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-[#111]"
+		class="h-12 px-4.5 rounded-xl border-none bg-signal cursor-pointer flex items-center gap-2 text-[15px] font-semibold text-on-signal"
 	>
-		<i class="i-tabler-plus block size-[18px] text-[#111]"></i>
+		<i class="i-tabler-plus block size-[18px] text-on-signal"></i>
 		Create “{searchString.trim()}”
 	</button>
 {/snippet}
@@ -345,7 +316,7 @@
 					class="{wrap
 						? 'h-[30px] px-3 text-[13px]'
 						: 'h-[34px] px-3.5 text-sm'} rounded-full font-semibold whitespace-nowrap border-solid border-1 cursor-pointer transition-colors
-						{active ? 'bg-dark text-bg border-dark' : 'bg-transparent border-[#2e2e34] text-[#c9c9cf]'}"
+						{active ? 'bg-dark text-bg border-dark' : 'bg-transparent border-edge text-soft'}"
 				>
 					{routine.name}
 				</button>
@@ -371,7 +342,6 @@
 				onkeydown={onSearchKey}
 			/>
 			{@render routineChips(true)}
-			{@render todayCard()}
 
 			{#if visibleExercises.length > 0}
 				<div
@@ -385,23 +355,23 @@
 							data-id={exercise.id}
 							onclick={() => select(exercise.id)}
 							aria-current={isSelected ? "true" : undefined}
-							class="w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none border-b-solid border-b-1 border-b-[#1f1f23] last:border-b-0 text-left cursor-pointer {isSelected
-								? 'bg-[#32323a]'
-								: 'bg-transparent hover:bg-[#1c1c20]'}"
+							class="w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none border-b-solid border-b-1 border-b-divider-2 last:border-b-0 text-left cursor-pointer {isSelected
+								? 'bg-selected'
+								: 'bg-transparent hover:bg-lift'}"
 						>
 							<span
 								class="size-[7px] rounded-full shrink-0 {isTodayLine(current) && current.sets.length
 									? 'bg-signal'
-									: 'bg-[#2e2e34]'}"
+									: 'bg-edge'}"
 							></span>
 							<span class="flex-1 min-w-0 flex flex-col gap-0.5">
 								<span
 									class="text-[15px] font-semibold truncate {isSelected
-										? 'text-white'
-										: 'text-[#e2e2e6]'}">{exercise.title}</span
+										? 'text-fg'
+										: 'text-strong'}">{exercise.title}</span
 								>
 							</span>
-							<span class="text-xs text-[#7c7c85] whitespace-nowrap"
+							<span class="text-xs text-dim whitespace-nowrap"
 								>{daysAgo(current.date, current.year)}</span
 							>
 						</button>
@@ -414,7 +384,7 @@
 				</div>
 			{/if}
 
-			<p class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-[#7c7c85] px-1">
+			<p class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-dim px-1">
 				<span><kbd>/</kbd> search</span>
 				<span><kbd>↑</kbd> <kbd>↓</kbd> switch</span>
 				<span><kbd>Enter</kbd> edit log</span>
@@ -437,22 +407,23 @@
 {:else}
 	<main
 		class="flex flex-col gap-3"
-		style="padding-top: calc(var(--nav-h, 11rem) + 0.75rem); padding-bottom: calc(var(--pad-h, 0px) + 2.5rem)"
+		style="padding-top: calc(var(--nav-h, 11rem) + 0.75rem); padding-bottom: calc({!wide &&
+		$routines.length > 0
+			? chipsHeight
+			: 0}px + 2.5rem)"
 	>
-		{@render todayCard()}
-
 		{#if visibleExercises.length > 0}
 			<div class="rounded-2xl bg-surface border-solid border-1 border-hairline overflow-hidden">
 				{#each visibleExercises as exercise (exercise.id)}
 					{@const current = parseLog(exercise.workoutsString).current}
 					<button
 						onclick={() => openPage(exercise.id!)}
-						class="w-full min-h-16 flex items-center gap-2.5 pl-3.5 pr-2 py-3 border-none border-b-solid border-b-1 border-b-[#222227] last:border-b-0 bg-transparent active:bg-[#26262c] text-left cursor-pointer"
+						class="w-full min-h-16 flex items-center gap-2.5 pl-3.5 pr-2 py-3 border-none border-b-solid border-b-1 border-b-divider last:border-b-0 bg-transparent active:bg-raised text-left cursor-pointer"
 					>
 						<span
 							class="size-2 rounded-full shrink-0 {isTodayLine(current) && current.sets.length
 								? 'bg-signal'
-								: 'bg-[#2e2e34]'}"
+								: 'bg-edge'}"
 						></span>
 						<span class="flex-1 min-w-0 flex flex-col gap-[3px]">
 							<span class="text-base font-semibold truncate">{exercise.title}</span>
@@ -462,10 +433,10 @@
 								>
 							{/if}
 						</span>
-						<span class="text-xs text-[#7c7c85] whitespace-nowrap"
+						<span class="text-xs text-dim whitespace-nowrap"
 							>{daysAgo(current.date, current.year)}</span
 						>
-						<i class="i-tabler-chevron-right block size-[18px] shrink-0 text-[#4a4a52]"></i>
+						<i class="i-tabler-chevron-right block size-[18px] shrink-0 text-ghost"></i>
 					</button>
 				{/each}
 			</div>
@@ -509,7 +480,7 @@
 				spellcheck="false"
 				autocomplete="off"
 				placeholder="Bizeps Kabel curl"
-				class="h-[50px] w-full rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 text-[17px] font-semibold outline-none focus:border-signal placeholder:text-[#5a5a62] placeholder:font-normal"
+				class="h-[50px] w-full rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 text-[17px] font-semibold outline-none focus:border-signal-ink placeholder:text-placeholder placeholder:font-normal"
 			/>
 		</div>
 		<div class="flex flex-col gap-1.5">
@@ -523,13 +494,13 @@
 				spellcheck="false"
 				autocomplete="off"
 				placeholder="Sitz 3, Rolle 2"
-				class="h-[50px] w-full rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 font-mono text-[15px] outline-none focus:border-signal placeholder:text-[#5a5a62]"
+				class="h-[50px] w-full rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 font-mono text-[15px] outline-none focus:border-signal-ink placeholder:text-placeholder"
 			/>
 		</div>
 		<button
 			type="submit"
 			disabled={!newTitle.trim()}
-			class="h-12 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-[#111] disabled:opacity-40 disabled:cursor-default"
+			class="h-12 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-on-signal disabled:opacity-40 disabled:cursor-default"
 		>
 			Create exercise
 		</button>
@@ -547,9 +518,19 @@
 				aria-label="New exercise"
 				class="size-12 shrink-0 rounded-xl border-none bg-signal cursor-pointer flex items-center justify-center"
 			>
-				<i class="i-tabler-plus block size-[22px] text-[#111]"></i>
+				<i class="i-tabler-plus block size-[22px] text-on-signal"></i>
 			</button>
 		</div>
-		{@render routineChips(false)}
 	{/if}
 </Nav>
+
+{#if !wide && $routines.length > 0}
+	<!-- Routine filter sits at the bottom on phones, right above the tab bar, within thumb reach. -->
+	<div
+		bind:offsetHeight={chipsHeight}
+		class="fixed left-0 right-0 z-30 px-4 py-2 bg-bg border-t-solid border-t-1 border-t-rule"
+		style="bottom: var(--tab-h, 0px)"
+	>
+		{@render routineChips(false)}
+	</div>
+{/if}

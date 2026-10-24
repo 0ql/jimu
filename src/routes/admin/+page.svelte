@@ -155,15 +155,15 @@
 						? ''
 						: 's'}"
 				>
-					<span class="font-mono text-[10px] {latest ? 'text-fg' : 'text-[#7c7c85]'}"
+					<span class="font-mono text-[10px] {latest ? 'text-fg' : 'text-dim'}"
 						>{week.days || ""}</span
 					>
 					<div
-						class="w-full max-w-6 rounded-t-[4px] {latest ? 'bg-signal' : 'bg-[#3a3a41]'}"
+						class="w-full max-w-6 rounded-t-[4px] {latest ? 'bg-signal' : 'bg-track'}"
 						style="height: {week.days ? Math.max(4, Math.round((week.days / maxWeek) * 120)) : 2}px"
 					></div>
 					<span
-						class="font-mono text-[10px] text-[#7c7c85] {(data.weekly.length - 1 - i) % 3
+						class="font-mono text-[10px] text-dim {(data.weekly.length - 1 - i) % 3
 							? 'invisible sm:visible'
 							: ''}">{weekLabel(week.start)}</span
 					>
@@ -197,12 +197,12 @@
 				</thead>
 				<tbody>
 					{#each data.users as user (user.username)}
-						<tr class="border-t-solid border-t-1 border-t-[#222227]">
+						<tr class="border-t-solid border-t-1 border-t-divider">
 							<td class="px-4 sm:px-5 py-2.5 whitespace-nowrap">
 								<span class="font-semibold">{user.username}</span>
 								{#if user.isAdmin}
 									<span
-										class="ml-1.5 px-2 py-0.5 rounded-full bg-[rgba(215,245,90,0.15)] text-signal text-[11px] font-semibold"
+										class="ml-1.5 px-2 py-0.5 rounded-full bg-[rgba(215,245,90,0.15)] text-signal-ink text-[11px] font-semibold"
 										>admin</span
 									>
 								{/if}
@@ -234,8 +234,8 @@
 											class="h-8 px-3 rounded-lg border-none cursor-pointer text-xs font-semibold disabled:opacity-50 {armed
 												? user.isAdmin
 													? 'bg-destructive text-white'
-													: 'bg-signal text-[#111]'
-												: 'bg-surface-3 text-[#c9c9cf]'}"
+													: 'bg-signal text-on-signal'
+												: 'bg-surface-3 text-soft'}"
 										>
 											{armed
 												? user.isAdmin
@@ -262,9 +262,7 @@
 				</tbody>
 			</table>
 		</div>
-		<p
-			class="m-0 px-4 sm:px-5 py-3 text-xs text-faint border-t-solid border-t-1 border-t-[#222227]"
-		>
+		<p class="m-0 px-4 sm:px-5 py-3 text-xs text-faint border-t-solid border-t-1 border-t-divider">
 			"Joined" is empty for accounts created before sign-up dates were recorded. Sessions are
 			current sign-ins.
 		</p>

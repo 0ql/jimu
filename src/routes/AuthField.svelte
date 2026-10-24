@@ -30,7 +30,7 @@
 			{autocomplete}
 			autocapitalize="none"
 			spellcheck="false"
-			class="h-[50px] w-full rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 text-base outline-none focus:border-signal {type ===
+			class="h-[50px] w-full rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 text-base outline-none focus:border-signal-ink {type ===
 			'password'
 				? 'pr-12'
 				: ''}"

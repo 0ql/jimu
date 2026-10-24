@@ -102,7 +102,7 @@
 				spellcheck="false"
 				autocomplete="off"
 				placeholder="Push day"
-				class="h-[50px] w-full rounded-xl border-solid border-1 border-[#34343b] bg-bg px-3.5 text-[17px] font-semibold outline-none focus:border-signal placeholder:text-[#5a5a62] placeholder:font-normal"
+				class="h-[50px] w-full rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 text-[17px] font-semibold outline-none focus:border-signal-ink placeholder:text-placeholder placeholder:font-normal"
 			/>
 		</div>
 
@@ -121,9 +121,9 @@
 				>
 					{#each ids as id, i (id)}
 						<li
-							class="flex items-center gap-1 h-11 pr-1 border-b-solid border-b-1 border-b-[#1f1f23] last:border-b-0 {dragIndex ===
+							class="flex items-center gap-1 h-11 pr-1 border-b-solid border-b-1 border-b-divider-2 last:border-b-0 {dragIndex ===
 							i
-								? 'bg-[#26262c]'
+								? 'bg-raised'
 								: ''}"
 						>
 							<button
@@ -160,7 +160,7 @@
 		<fieldset class="m-0 p-0 border-none flex flex-col gap-2 min-w-0">
 			<legend class="w-full p-0 mb-2 text-xs text-subtle">Add exercises</legend>
 			<label
-				class="flex items-center gap-2 h-10 px-3 rounded-[10px] bg-bg border-solid border-1 border-[#2e2e34]"
+				class="flex items-center gap-2 h-10 px-3 rounded-[10px] bg-bg border-solid border-1 border-edge"
 			>
 				<i class="i-tabler-search block size-4 text-subtle shrink-0"></i>
 				<input
@@ -169,7 +169,7 @@
 					aria-label="Filter exercises"
 					placeholder="Filter exercises"
 					autocomplete="off"
-					class="flex-1 min-w-0 h-full border-none outline-none bg-transparent text-[15px] placeholder:text-[#7c7c85] [&::-webkit-search-cancel-button]:hidden"
+					class="flex-1 min-w-0 h-full border-none outline-none bg-transparent text-[15px] placeholder:text-dim [&::-webkit-search-cancel-button]:hidden"
 				/>
 			</label>
 			<div
@@ -178,15 +178,15 @@
 				{#each options as exercise (exercise.id)}
 					{@const checked = ids.includes(exercise.id!)}
 					<label
-						class="flex items-center gap-3 min-h-11 px-3 border-b-solid border-b-1 border-b-[#1f1f23] last:border-b-0 cursor-pointer {checked
-							? 'bg-[#1b1b1f]'
+						class="flex items-center gap-3 min-h-11 px-3 border-b-solid border-b-1 border-b-divider-2 last:border-b-0 cursor-pointer {checked
+							? 'bg-lift'
 							: ''}"
 					>
 						<input
 							type="checkbox"
 							{checked}
 							onchange={() => toggle(exercise.id!)}
-							class="m-0 size-4 shrink-0 accent-[#d7f55a]"
+							class="m-0 size-4 shrink-0 accent-signal-ink"
 						/>
 						<span class="flex-1 min-w-0 truncate text-[15px] {checked ? 'font-semibold' : ''}"
 							>{exercise.title}</span
@@ -205,12 +205,9 @@
 					onclick={remove}
 					class="h-12 px-4 rounded-xl border-none cursor-pointer flex items-center gap-2 text-[15px] {confirmDelete
 						? 'bg-destructive text-white'
-						: 'bg-surface-3 text-[#ff8a8a]'}"
+						: 'bg-surface-3 text-danger'}"
 				>
-					<i
-						class="i-tabler-trash block size-[18px] {confirmDelete
-							? 'text-white'
-							: 'text-[#ff8a8a]'}"
+					<i class="i-tabler-trash block size-[18px] {confirmDelete ? 'text-white' : 'text-danger'}"
 					></i>
 					{confirmDelete ? "Tap again to delete" : "Delete"}
 				</button>
@@ -218,7 +215,7 @@
 			<button
 				type="submit"
 				disabled={!name.trim()}
-				class="flex-1 h-12 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-[#111] disabled:opacity-40 disabled:cursor-default"
+				class="flex-1 h-12 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-on-signal disabled:opacity-40 disabled:cursor-default"
 			>
 				{routine ? "Save" : "Create routine"}
 			</button>

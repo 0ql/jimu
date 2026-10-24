@@ -52,11 +52,13 @@
 	<button
 		type="submit"
 		disabled={loading}
-		class="h-12 mt-1 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-[#111] disabled:opacity-60 disabled:cursor-default"
+		class="h-12 mt-1 rounded-xl border-none bg-signal cursor-pointer text-[15px] font-semibold text-on-signal disabled:opacity-60 disabled:cursor-default"
 	>
 		{loading ? "Logging in…" : "Log in"}
 	</button>
 	{#snippet footer()}
-		No account yet? <a href="/signup" class="font-semibold no-underline text-signal">Create one</a>
+		No account yet? <a href="/signup" class="font-semibold no-underline text-signal-ink"
+			>Create one</a
+		>
 	{/snippet}
 </AuthShell>

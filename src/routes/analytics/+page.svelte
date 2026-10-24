@@ -171,16 +171,16 @@
 		d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
 	const tokenClass: Record<ParsedSet["kind"], string> = {
 		warmup: "text-faint",
-		work: "text-[#c9c9cf]",
+		work: "text-soft",
 		drop: "text-drop",
-		invalid: "text-[#ff9b9b]",
+		invalid: "text-invalid",
 	};
 	const tile =
 		"flex flex-col gap-0.5 px-3.5 py-3 rounded-xl bg-surface border-solid border-1 border-hairline min-w-0";
 	const tileValue =
 		"font-display font-semibold text-[22px] leading-[1.2] whitespace-nowrap truncate";
 	const segment = (on: boolean) =>
-		`h-9 px-3.5 rounded-lg border-none cursor-pointer text-sm font-semibold whitespace-nowrap ${on ? "bg-dark text-bg" : "bg-transparent text-[#c9c9cf] hover:bg-surface-3"}`;
+		`h-9 px-3.5 rounded-lg border-none cursor-pointer text-sm font-semibold whitespace-nowrap ${on ? "bg-dark text-bg" : "bg-transparent text-soft hover:bg-surface-3"}`;
 </script>
 
 <svelte:window onkeydown={onWindowKey} />
@@ -210,14 +210,14 @@
 				<button
 					onclick={() => (selectedId = o.exercise.id!)}
 					aria-current={on ? "true" : undefined}
-					class="w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none border-b-solid border-b-1 border-b-[#1f1f23] last:border-b-0 text-left cursor-pointer {on
-						? 'bg-[#32323a]'
-						: 'bg-transparent hover:bg-[#1c1c20]'}"
+					class="w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none border-b-solid border-b-1 border-b-divider-2 last:border-b-0 text-left cursor-pointer {on
+						? 'bg-selected'
+						: 'bg-transparent hover:bg-lift'}"
 				>
 					<span
 						class="flex-1 min-w-0 truncate text-[15px] font-semibold {on
-							? 'text-white'
-							: 'text-[#e2e2e6]'}">{o.exercise.title}</span
+							? 'text-fg'
+							: 'text-strong'}">{o.exercise.title}</span
 					>
 					<span class="font-mono text-xs text-subtle shrink-0">{o.sessions.length}×</span>
 				</button>
@@ -302,7 +302,7 @@
 						{#if stats.delta !== null}
 							<span
 								class="font-mono text-xs {stats.delta > 0
-									? 'text-signal'
+									? 'text-signal-ink'
 									: stats.delta < 0
 										? 'text-drop'
 										: 'text-subtle'}">{signed(stats.delta, format)} vs previous</span
@@ -320,7 +320,7 @@
 							class="{tileValue} {stats.change === null
 								? ''
 								: stats.change > 0
-									? 'text-signal'
+									? 'text-signal-ink'
 									: stats.change < 0
 										? 'text-drop'
 										: ''}"
@@ -377,7 +377,7 @@
 							</thead>
 							<tbody>
 								{#each [...inRange].reverse() as s (s.date.getTime())}
-									<tr class="border-t-solid border-t-1 border-t-[#222227] font-mono text-[13px]">
+									<tr class="border-t-solid border-t-1 border-t-divider font-mono text-[13px]">
 										<td class="px-4 sm:px-5 py-2.5 text-faint whitespace-nowrap"
 											>{shortDate(s.date)}</td
 										>

@@ -14,15 +14,15 @@
 	const value = (s: ParsedSet) =>
 		s.kind === "invalid" ? s.token : `${formatWeight(s.weight)}×${s.reps}`;
 	const kindClass: Record<ParsedSet["kind"], string> = {
-		warmup: "border-dashed border-[#4a4a52] text-[#a3a3ab]",
-		work: "border-solid border-[#34343b] bg-surface-3 text-fg",
+		warmup: "border-dashed border-ghost text-subtle",
+		work: "border-solid border-edge-2 bg-surface-3 text-fg",
 		drop: "border-solid border-drop-border bg-drop-bg text-drop",
-		invalid: "border-dashed border-[#e05a5a] text-[#ff9b9b]",
+		invalid: "border-dashed border-invalid-border text-invalid",
 	};
 </script>
 
 {#if sets.length === 0}
-	<span class="font-mono text-[13px] text-[#7c7c85]">Type sets like a10x12 30x10 x8 d15x7</span>
+	<span class="font-mono text-[13px] text-dim">Type sets like a10x12 30x10 x8 d15x7</span>
 {:else}
 	<div class="flex flex-wrap gap-1.5">
 		{#each sets as set}

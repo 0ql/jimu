@@ -4,7 +4,20 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-	<meta name="theme-color" content="#0a0a0a" />
+	<meta name="theme-color" content="#0d0d0e" />
+	<script>
+		// Apply the saved theme before the first paint, so pages don't flash night first
+		// (src/lib/theme.ts keeps it in sync afterwards).
+		try {
+			const theme = localStorage.getItem("jimu.theme");
+			if (theme === "dark" || theme === "light") {
+				document.documentElement.dataset.theme = theme;
+				document
+					.querySelector('meta[name="theme-color"]')
+					.setAttribute("content", theme === "light" ? "#f3f3ef" : "#1b1b1e");
+			}
+		} catch {}
+	</script>
 	<link rel="manifest" href="/manifest.json" />
 	<link rel="icon" href="/icon-192.png" />
 	<link rel="apple-touch-icon" href="/icon-192.png" />
