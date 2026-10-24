@@ -34,6 +34,8 @@ export class LogEditor {
 
 	#exercise: () => Exercise;
 	#saveTimer: ReturnType<typeof setTimeout> | undefined;
+	/** Where the caret is going while an insert waits for the DOM to update. */
+	#pendingCaret: number | null = null;
 
 	constructor(exercise: () => Exercise) {
 		this.#exercise = exercise;
@@ -59,6 +61,9 @@ export class LogEditor {
 	};
 
 	#caret = () => {
+		// A key pressed before the previous one's caret was placed continues from that position,
+		// so fast presses never insert at a stale caret.
+		if (this.#pendingCaret !== null) return { start: this.#pendingCaret, end: this.#pendingCaret };
 		const focused = !!this.textarea && document.activeElement === this.textarea;
 		const end = this.workoutsString.length;
 		return {
@@ -68,9 +73,13 @@ export class LogEditor {
 	};
 
 	#placeCaret = async (pos: number) => {
+		this.#pendingCaret = pos;
 		await tick();
+		// A newer press already moved on; it places the caret itself.
+		if (this.#pendingCaret !== pos) return;
 		this.textarea?.focus();
 		this.textarea?.setSelectionRange(pos, pos);
+		this.#pendingCaret = null;
 	};
 
 	/** Inserts text at the caret (or the end); `separate` adds a space before it if needed. */

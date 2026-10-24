@@ -21,8 +21,34 @@
 	import Popup from "$lib/ui/Popup.svelte";
 	import Nav from "../Nav.svelte";
 	import { toast } from "$lib/toast.svelte";
+	import {
+		HAPTIC_STRENGTHS,
+		hapticStrength,
+		hapticsEnabled,
+		hapticsSupported,
+		previewHaptic,
+		type HapticStrength,
+	} from "$lib/haptics";
 
 	let { data } = $props();
+
+	// What happened on the last strength tap, so a phone that stays silent can be diagnosed:
+	// the browser either refuses the buzz (fixable in the app) or hands it to the phone (then the
+	// phone's own settings are dropping it).
+	let vibrationTest: {
+		ms: number;
+		result: boolean | null;
+		tapped: boolean;
+		secure: boolean;
+	} | null = $state(null);
+	const testVibration = (ms: number) => {
+		vibrationTest = {
+			ms,
+			result: previewHaptic(ms),
+			tapped: navigator.userActivation?.hasBeenActive ?? true,
+			secure: window.isSecureContext,
+		};
+	};
 
 	let db: IDBPDatabase<DB>;
 	let exerciseMeta: SyncMeta | undefined = $state();
@@ -248,6 +274,84 @@
 					<dt class="text-subtle">Routines</dt>
 					<dd class="m-0 font-mono text-[13px] text-[#c9c9cf]">{versionText(routineMeta)}</dd>
 				</dl>
+			</section>
+
+			<section aria-labelledby="keypad-head" class={card}>
+				<h2 id="keypad-head" class={cardHead}>Keypad</h2>
+				<label class="{row} cursor-pointer {hapticsSupported ? '' : 'opacity-60 cursor-default'}">
+					<i class="i-tabler-device-mobile-vibration block size-5 text-subtle shrink-0"></i>
+					<span class="flex-1 min-w-0 flex flex-col">
+						<span class="font-semibold">Vibrate on key press</span>
+						<span class="text-xs text-subtle">
+							{hapticsSupported
+								? "A short buzz on every keypad tap, on this device"
+								: "This browser can't vibrate (iPhones don't support it)"}
+						</span>
+					</span>
+					<!-- Native checkbox styled as a switch, so it keeps keyboard and screen reader support. -->
+					<input
+						type="checkbox"
+						role="switch"
+						bind:checked={$hapticsEnabled}
+						onchange={(e) => e.currentTarget.checked && previewHaptic()}
+						disabled={!hapticsSupported}
+						class="appearance-none m-0 shrink-0 w-11 h-6.5 rounded-full bg-[#3a3a41] relative cursor-pointer transition-colors checked:bg-signal disabled:cursor-default
+							before:content-[''] before:absolute before:top-[3px] before:left-[3px] before:size-5 before:rounded-full before:bg-[#f2f1ec] before:transition-transform checked:before:translate-x-[18px] checked:before:bg-[#111]"
+					/>
+				</label>
+				<div
+					class="{row} {divider} {hapticsSupported && $hapticsEnabled ? '' : 'opacity-50'}"
+					role="group"
+					aria-labelledby="strength-label"
+				>
+					<span id="strength-label" class="flex-1 min-w-0 flex flex-col">
+						<span class="font-semibold">Strength</span>
+						<span class="text-xs text-subtle"
+							>Tap to feel it. Nothing at all? Check silent mode.</span
+						>
+					</span>
+					<div
+						class="flex gap-1 p-1 rounded-xl bg-bg border-solid border-1 border-hairline shrink-0"
+					>
+						{#each Object.keys(HAPTIC_STRENGTHS) as HapticStrength[] as strength}
+							<button
+								onclick={() => {
+									$hapticStrength = strength;
+									testVibration(HAPTIC_STRENGTHS[strength]);
+								}}
+								disabled={!hapticsSupported || !$hapticsEnabled}
+								aria-pressed={$hapticStrength === strength}
+								class="h-8 px-2.5 rounded-lg border-none cursor-pointer text-[13px] font-semibold capitalize disabled:cursor-default {$hapticStrength ===
+								strength
+									? 'bg-dark text-bg'
+									: 'bg-transparent text-[#c9c9cf]'}">{strength}</button
+							>
+						{/each}
+					</div>
+				</div>
+				{#if vibrationTest}
+					<p
+						role="status"
+						class="m-0 px-4 pb-3.5 -mt-1 text-xs leading-relaxed {vibrationTest.result
+							? 'text-subtle'
+							: 'text-[#ff8a8a]'}"
+					>
+						{#if vibrationTest.result === true}
+							The browser accepted a {vibrationTest.ms} ms buzz. Felt nothing? Then the phone is dropping
+							it: check silent / Do Not Disturb, battery saver, and vibration or touch feedback under
+							Sound &amp; vibration.
+						{:else if vibrationTest.result === false}
+							The browser refused the buzz{vibrationTest.tapped ? "" : " (no tap on the page yet)"}.
+						{:else}
+							This browser doesn't support vibration.
+						{/if}
+						<span class="block font-mono text-faint mt-1">
+							vibrate({vibrationTest.ms}) → {String(vibrationTest.result)} · tapped: {vibrationTest.tapped
+								? "yes"
+								: "no"} · secure: {vibrationTest.secure ? "yes" : "no"}
+						</span>
+					</p>
+				{/if}
 			</section>
 
 			<section
