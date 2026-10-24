@@ -19,8 +19,12 @@
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(credentials),
-			});
+			}).catch(() => null);
 
+			if (!res) {
+				error = "You're offline. Logging in needs a connection.";
+				return;
+			}
 			if (res.status !== 200) {
 				error = "That username and password don't match.";
 				return;
@@ -32,8 +36,6 @@
 		}
 	};
 </script>
-
-<svelte:head><title>Log in · jimu</title></svelte:head>
 
 <AuthShell title="Log in" {error} onsubmit={login}>
 	<AuthField

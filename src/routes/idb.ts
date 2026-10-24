@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { isNetworkError, online } from "$lib/network";
 import { writable, type Writable } from "svelte/store";
 import { page } from "$app/state";
 
@@ -87,6 +88,26 @@ let routineEdits = 0;
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * POSTs to the server; null when it can't be reached. Offline is not an error here: the data
+ * stays dirty on this device and syncPending() uploads it once the connection is back.
+ */
+const send = async (url: string, body: unknown) => {
+	try {
+		const res = await fetch(url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		});
+		online.set(true);
+		return res;
+	} catch (error) {
+		if (!isNetworkError(error)) throw error;
+		online.set(false);
+		return null;
+	}
+};
+
 export const syncToServer = async () => {
 	if (syncTimer) {
 		clearTimeout(syncTimer);
@@ -94,12 +115,8 @@ export const syncToServer = async () => {
 	}
 	const editsAtStart = exerciseEdits;
 	const exercises = await idb.getAll("exercises");
-	const res = await fetch("/", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(exercises),
-	});
-	if (!res.ok) return;
+	const res = await send("/", exercises);
+	if (!res?.ok) return;
 	const { lastModified } = await res.json();
 	if (exerciseEdits === editsAtStart) {
 		await markSynced(EXERCISES_META, lastModified);
@@ -123,12 +140,8 @@ export const syncRoutinesToServer = async () => {
 	}
 	const editsAtStart = routineEdits;
 	const all = await idb.getAll("routines");
-	const res = await fetch("/routines", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(all),
-	});
-	if (!res.ok) return;
+	const res = await send("/routines", all);
+	if (!res?.ok) return;
 	const { lastModified } = await res.json();
 	if (routineEdits === editsAtStart) await markSynced(ROUTINES_META, lastModified);
 	else await idb.put("meta", { id: ROUTINES_META, lastChanged: lastModified, dirty: true });
@@ -315,10 +328,23 @@ const claimLocalData = async (uuid: string) => {
 	if (owner !== uuid) await idb.put("meta", { id: OWNER_META, lastChanged: 0, owner: uuid });
 };
 
-/** Logout: upload pending changes, then clear local data so the next account starts clean. */
+/** Uploads whatever changed on this device while it was offline. */
+export const syncPending = async () => {
+	if (!idb) return;
+	if ((await idb.get("meta", EXERCISES_META))?.dirty) await syncToServer();
+	if ((await idb.get("meta", ROUTINES_META))?.dirty) await syncRoutinesToServer();
+};
+
+/**
+ * Logout: upload pending changes, then clear local data so the next account starts clean.
+ * Returns false, and clears nothing, when changes couldn't be uploaded (e.g. offline), so
+ * logging out never throws away unsynced training.
+ */
 export const syncAndClearLocalData = async () => {
 	const db = await loadDB();
-	if ((await db.get("meta", EXERCISES_META))?.dirty) await syncToServer();
-	if ((await db.get("meta", ROUTINES_META))?.dirty) await syncRoutinesToServer();
+	await syncPending();
+	if ((await db.get("meta", EXERCISES_META))?.dirty || (await db.get("meta", ROUTINES_META))?.dirty)
+		return false;
 	await resetLocalData();
+	return true;
 };

@@ -97,8 +97,6 @@
 	const thisWeek = $derived(data.weekly.at(-1)?.days ?? 0);
 </script>
 
-<svelte:head><title>Admin · jimu</title></svelte:head>
-
 <main
 	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 flex flex-col gap-5"
 	style="padding-top: calc(var(--nav-h, 6rem) + 1.25rem)"

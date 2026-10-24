@@ -37,8 +37,12 @@
 					username: credentials.username,
 					password: credentials.password2,
 				}),
-			});
+			}).catch(() => null);
 
+			if (!res) {
+				error = "You're offline. Creating an account needs a connection.";
+				return;
+			}
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
 				error = data.error ?? "Something went wrong";
@@ -51,8 +55,6 @@
 		}
 	};
 </script>
-
-<svelte:head><title>Create account · jimu</title></svelte:head>
 
 <AuthShell title="Create account" {error} onsubmit={signup}>
 	<AuthField

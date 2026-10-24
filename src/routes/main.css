@@ -96,6 +96,9 @@
 	--invalid: #ff9b9b;
 	--invalid-border: #e05a5a;
 	--ok: #4ade80;
+	--warn: #ffd08a;
+	--warn-bg: #3a2b12;
+	--warn-edge: #5a4218;
 	--drop: #ffb088;
 	--drop-bg: rgba(255, 138, 76, 0.12);
 	--drop-border: rgba(255, 138, 76, 0.45);
@@ -131,6 +134,8 @@
 	--tabbar: #1f1f22;
 	--keycap: #38383f;
 	--popup-edge: #3a3a41;
+	--warn-bg: #46351a;
+	--warn-edge: #664d22;
 }
 
 /* Light: warm off-white page, white cards, lime kept for fills with a darker olive for text. */
@@ -171,6 +176,9 @@
 	--invalid: #c23a3a;
 	--invalid-border: #d65252;
 	--ok: #16a34a;
+	--warn: #774800;
+	--warn-bg: #fde8bb;
+	--warn-edge: #f1cf86;
 	--drop: #b8541c;
 	--drop-bg: rgba(255, 138, 76, 0.14);
 	--drop-border: rgba(214, 102, 44, 0.5);

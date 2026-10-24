@@ -21,6 +21,7 @@
 	import Popup from "$lib/ui/Popup.svelte";
 	import Nav from "../Nav.svelte";
 	import { toast } from "$lib/toast.svelte";
+	import { forgetOfflineCache, online } from "$lib/network";
 	import {
 		HAPTIC_STRENGTHS,
 		hapticStrength,
@@ -132,16 +133,54 @@
 		toast.success("All exercises deleted on this device");
 	};
 
+	// Why logging out didn't happen, shown under the Log out row.
+	const LOGOUT_PROBLEMS = {
+		offline: {
+			title: "You're offline",
+			text: "Logging out first saves your latest training to your account, so it needs a connection. Try again once you're back online.",
+		},
+		unsynced: {
+			title: "Your changes couldn't be saved",
+			text: "Some training on this device isn't in your account yet, so you're still logged in. Try again in a moment.",
+		},
+		server: {
+			title: "Couldn't log out",
+			text: "The server didn't answer. Try again in a moment.",
+		},
+	};
+	let logoutProblem: keyof typeof LOGOUT_PROBLEMS | null = $state(null);
+	let loggingOut = $state(false);
+	// The offline note goes away by itself once the connection is back.
+	$effect(() => {
+		if ($online && logoutProblem === "offline") logoutProblem = null;
+	});
+
 	const logout = async () => {
-		// Upload pending edits while still signed in, then leave nothing behind for the next account.
-		await syncAndClearLocalData();
-		const res = await fetch("/settings", {
-			method: "POST",
-		});
-		if (!res.ok) {
-			return alert("Failed to log out");
+		logoutProblem = null;
+		// Checked first: going ahead offline would clear this device and then fail to log out.
+		if (!$online) {
+			logoutProblem = "offline";
+			return;
 		}
-		goto("/login", { invalidateAll: true });
+		loggingOut = true;
+		try {
+			// Upload pending edits while still signed in, then leave nothing behind for the next account.
+			if (!(await syncAndClearLocalData())) {
+				logoutProblem = $online ? "unsynced" : "offline";
+				return;
+			}
+			const res = await fetch("/settings", {
+				method: "POST",
+			}).catch(() => null);
+			if (!res?.ok) {
+				logoutProblem = "server";
+				return;
+			}
+			forgetOfflineCache();
+			goto("/login", { invalidateAll: true });
+		} finally {
+			loggingOut = false;
+		}
 	};
 
 	const resetAccountForm = () => {
@@ -175,8 +214,9 @@
 					currentPassword: account.currentPassword,
 					newPassword: account.newPassword || undefined,
 				}),
-			});
+			}).catch(() => null);
 
+			if (!res) return toast.error("You're offline. Account changes need a connection.");
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}));
 				return toast.error(body.error ?? "Something went wrong");
@@ -252,8 +292,35 @@
 				<div class="{row} {divider}">
 					<i class="i-tabler-logout block size-5 text-subtle shrink-0"></i>
 					<span class="flex-1">Log out of this device</span>
-					<button onclick={logout} class={secondaryBtn}>Log out</button>
+					<button onclick={logout} disabled={loggingOut} class={secondaryBtn}>
+						{loggingOut ? "Logging out…" : "Log out"}
+					</button>
 				</div>
+				{#if logoutProblem}
+					{@const problem = LOGOUT_PROBLEMS[logoutProblem]}
+					<!-- Colors are set on each part because main.css gives every element the foreground color. -->
+					<div
+						role="alert"
+						class="mx-4 mb-4 -mt-1 flex gap-3 p-3.5 rounded-xl bg-[var(--warn-bg)] border-solid border-1 border-[var(--warn-edge)]"
+					>
+						<i
+							class="{logoutProblem === 'offline'
+								? 'i-tabler-cloud-off'
+								: 'i-tabler-alert-circle'} block size-5 shrink-0 mt-px text-[var(--warn)]"
+						></i>
+						<div class="flex-1 min-w-0 flex flex-col gap-1">
+							<span class="text-sm font-semibold text-[var(--warn)]">{problem.title}</span>
+							<span class="text-[13px] leading-snug text-[var(--warn)]">{problem.text}</span>
+						</div>
+						<button
+							onclick={() => (logoutProblem = null)}
+							aria-label="Dismiss"
+							class="size-7 -mr-1 -mt-1 shrink-0 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center"
+						>
+							<i class="i-tabler-x block size-4 text-[var(--warn)]"></i>
+						</button>
+					</div>
+				{/if}
 			</section>
 
 			<section aria-labelledby="sync-head" class={card}>

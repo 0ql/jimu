@@ -25,7 +25,7 @@
 	class="fixed left-0 right-0 top-0 z-30 px-4 lg:px-8 lg:pb-3.5 lg:[--nav-pt:1.25rem] bg-bg flex flex-col gap-3 {children
 		? '[--nav-pt:0.5rem] pb-2 border-b-solid border-b-1 border-b-rule'
 		: '[--nav-pt:0px] lg:border-b-solid lg:border-b-1 lg:border-b-rule'}"
-	style="padding-top: calc(var(--nav-pt) + env(safe-area-inset-top))"
+	style="padding-top: calc(var(--nav-pt) + env(safe-area-inset-top) + var(--offline-h, 0px))"
 >
 	<header class="hidden lg:flex items-center w-full max-w-[1376px] mx-auto">
 		<div class="flex items-center flex-1 gap-1">

@@ -31,6 +31,7 @@
 	import SearchBar from "./SearchBar.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
 	import { toast } from "$lib/toast.svelte";
+	import { isNetworkError, online } from "$lib/network";
 
 	let searchString: string = $state("");
 	let db: IDBPDatabase<DB>;
@@ -50,9 +51,23 @@
 	// Empty states wait for IndexedDB so they don't flash on every visit.
 	let loaded = $state(false);
 
+	/** GETs the server's copy; null when the server can't be reached or answers with an error. */
+	const download = async (url: string) => {
+		try {
+			const res = await fetch(url);
+			$online = true;
+			return res.ok ? await res.json() : null;
+		} catch (error) {
+			if (!isNetworkError(error)) throw error;
+			$online = false;
+			return null;
+		}
+	};
+
 	const syncFromServer = async () => {
-		const res = await fetch("/");
-		const jsn = await res.json();
+		const jsn = await download("/");
+		// Nothing is cleared unless the download worked, so going offline mid-sync loses nothing.
+		if (!jsn) return;
 		await db.clear("exercises");
 		for (const exercise of jsn) {
 			await db.add("exercises", {
@@ -69,8 +84,8 @@
 	};
 
 	const syncRoutinesFromServer = async () => {
-		const res = await fetch("/routines");
-		const jsn: Routine[] = await res.json();
+		const jsn: Routine[] | null = await download("/routines");
+		if (!jsn) return;
 		await db.clear("routines");
 		for (const routine of jsn) {
 			await db.add("routines", {
@@ -99,6 +114,13 @@
 		if (exerciseParam && $exercises.some((e) => e.id === exerciseParam)) {
 			selectedId = exerciseParam;
 			if (!wide) openPage(exerciseParam);
+		}
+
+		// Offline the page data is the stored copy, so its server timestamps are stale: skip the
+		// sync. Edits stay on this device and upload when the connection is back (see +layout).
+		if (!$online) {
+			loaded = true;
+			return;
 		}
 
 		const serverTs = data.lastModified?.getTime() ?? 0;

@@ -95,7 +95,7 @@
 	<header
 		bind:offsetHeight={headerHeight}
 		class="sticky top-0 z-10 shrink-0 flex items-center gap-1 pl-1 pr-2 bg-bg border-b-solid border-b-1 border-b-rule"
-		style="height: var(--nav-h, 77px); padding-top: env(safe-area-inset-top)"
+		style="height: var(--nav-h, 77px); padding-top: calc(env(safe-area-inset-top) + var(--offline-h, 0px))"
 	>
 		<button
 			onclick={back}
