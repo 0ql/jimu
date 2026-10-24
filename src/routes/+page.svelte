@@ -511,14 +511,14 @@
 	{#if !wide}
 		<div class="flex gap-2">
 			<div class="flex-1 min-w-0">
-				<SearchBar bind:value={searchString} />
+				<SearchBar bind:value={searchString} compact />
 			</div>
 			<button
 				onclick={() => openAdd()}
 				aria-label="New exercise"
-				class="size-12 shrink-0 rounded-xl border-none bg-signal cursor-pointer flex items-center justify-center"
+				class="size-10 shrink-0 rounded-xl border-none bg-signal cursor-pointer flex items-center justify-center"
 			>
-				<i class="i-tabler-plus block size-[22px] text-on-signal"></i>
+				<i class="i-tabler-plus block size-5 text-on-signal"></i>
 			</button>
 		</div>
 	{/if}

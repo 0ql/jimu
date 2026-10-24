@@ -4,8 +4,6 @@
 	import { datedLines, formatKg, lineStats, parseLine, type ParsedSet } from "$lib/sets";
 	import Nav from "../Nav.svelte";
 
-	const HEATMAP_WEEKS = 16;
-
 	type Entry = {
 		id: number;
 		title: string;
@@ -71,29 +69,15 @@
 		};
 	});
 
-	const heatmap = $derived.by(() => {
-		const byKey = new Map(sessions.map((s) => [s.key, s]));
-		const start = daysBack(mondayOffset + (HEATMAP_WEEKS - 1) * 7);
-		const max = Math.max(1, ...sessions.filter((s) => s.date >= start).map((s) => s.volume));
-		const weeks = [];
-		for (let w = 0; w < HEATMAP_WEEKS; w++) {
-			const days = [];
-			for (let d = 0; d < 7; d++) {
-				const date = new Date(start.getTime() + (w * 7 + d) * 86400000);
-				const session = byKey.get(dayKey(date));
-				const ratio = session ? session.volume / max : 0;
-				days.push({
-					future: date > today,
-					label: `${date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}: ${
-						session ? `${session.entries.length} exercises, ${formatKg(session.volume)} kg` : "rest"
-					}`,
-					level: !session ? 0 : ratio > 0.75 ? 4 : ratio > 0.5 ? 3 : ratio > 0.25 ? 2 : 1,
-				});
-			}
-			weeks.push(days);
-		}
-		return weeks;
-	});
+	// The activity calendar shows one calendar year: a column per week (Monday on top), a square
+	// per day, shaded by how many exercises were logged that day.
+	const DAY = 86400000;
+	const thisYear = today.getFullYear();
+	const firstYear = $derived(Math.min(thisYear, ...sessions.map((s) => s.date.getFullYear())));
+	let year = $state(thisYear);
+
+	const levelFor = (count: number) => (count >= 7 ? 4 : count >= 5 ? 3 : count >= 3 ? 2 : 1);
+	const levelLegend = ["1–2", "3–4", "5–6", "7+"];
 	const levelClass = [
 		"bg-surface-3",
 		"bg-[rgba(215,245,90,0.25)]",
@@ -101,6 +85,73 @@
 		"bg-[rgba(215,245,90,0.7)]",
 		"bg-signal",
 	];
+
+	const calendar = $derived.by(() => {
+		const byKey = new Map(sessions.map((s) => [s.key, s]));
+		const jan1 = new Date(year, 0, 1);
+		const start = new Date(year, 0, 1 - ((jan1.getDay() + 6) % 7));
+		const dec31 = new Date(year, 11, 31);
+		const end = new Date(year, 11, 31 + ((7 - dec31.getDay()) % 7));
+		const weeks: {
+			month: string | null;
+			days: { inYear: boolean; future: boolean; today: boolean; level: number; label: string }[];
+		}[] = [];
+		let trained = 0;
+		let exerciseCount = 0;
+		for (
+			let d = new Date(start);
+			d <= end;
+			d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7)
+		) {
+			const days = [];
+			let month: string | null = null;
+			for (let i = 0; i < 7; i++) {
+				const date = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i);
+				const inYear = date.getFullYear() === year;
+				if (inYear && date.getDate() === 1) {
+					month = date.toLocaleDateString("en-US", { month: "short" });
+				}
+				const session = inYear ? byKey.get(dayKey(date)) : undefined;
+				const count = session?.entries.length ?? 0;
+				if (count) {
+					trained++;
+					exerciseCount += count;
+				}
+				days.push({
+					inYear,
+					future: date > today,
+					today: date.getTime() === today.getTime(),
+					level: count ? levelFor(count) : 0,
+					label: `${date.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "2-digit" })}: ${
+						count ? `${count} exercise${count === 1 ? "" : "s"}` : "rest"
+					}`,
+				});
+			}
+			weeks.push({ month, days });
+		}
+		return {
+			weeks,
+			trained,
+			average: trained ? exerciseCount / trained : 0,
+		};
+	});
+
+	// Phones show the year as two half-years stacked, so every day stays visible without
+	// scrolling and the squares stay big enough to read.
+	let narrow = $state(false);
+	$effect(() => {
+		const mq = window.matchMedia("(max-width: 767px)");
+		narrow = mq.matches;
+		const onChange = (e: MediaQueryListEvent) => (narrow = e.matches);
+		mq.addEventListener("change", onChange);
+		return () => mq.removeEventListener("change", onChange);
+	});
+	const blocks = $derived.by(() => {
+		if (!narrow) return [calendar.weeks];
+		const july = calendar.weeks.findIndex((w) => w.month === "Jul");
+		return [calendar.weeks.slice(0, july), calendar.weeks.slice(july)];
+	});
+	const columns = $derived(Math.max(...blocks.map((b) => b.length)));
 
 	const months = $derived.by(() => {
 		const groups: { label: string; sessions: Session[] }[] = [];
@@ -129,21 +180,12 @@
 </script>
 
 <main
-	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 flex flex-col lg:flex-row lg:items-start gap-6"
+	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 flex flex-col gap-6"
 	style="padding-top: calc(var(--nav-h, 6rem) + 1.25rem)"
 >
-	<aside
-		class="lg:w-[380px] lg:shrink-0 lg:sticky flex flex-col gap-4"
-		style="top: calc(var(--nav-h, 5rem) + 1.25rem)"
-	>
-		<div class="flex flex-col gap-0.5">
-			<h1 class="m-0 font-display font-semibold text-[30px] leading-none">Sessions</h1>
-			<span class="text-sm text-subtle">
-				{sessions.length} training day{sessions.length === 1 ? "" : "s"} logged
-			</span>
-		</div>
-
-		<div class="grid grid-cols-3 gap-2">
+	<h1 class="sr-only">Sessions</h1>
+	<div>
+		<div class="grid grid-cols-3 gap-2 lg:w-[460px]">
 			<div
 				class="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-surface border-solid border-1 border-hairline"
 			>
@@ -165,50 +207,97 @@
 				>
 			</div>
 		</div>
+	</div>
 
-		<section
-			aria-label="Activity"
-			class="flex flex-col gap-3 p-4 rounded-2xl bg-surface border-solid border-1 border-hairline"
-		>
-			<div class="flex justify-between items-baseline">
-				<h2 class="m-0 text-[15px] font-semibold">Last {HEATMAP_WEEKS} weeks</h2>
-				<span class="text-xs text-subtle">shade = volume</span>
-			</div>
-			<div class="flex gap-2">
-				<div class="grid grid-rows-7 gap-[3px] text-[10px] text-faint font-mono" aria-hidden="true">
-					{#each ["M", "", "W", "", "F", "", "S"] as d}
-						<span class="h-[15px] leading-[15px]">{d}</span>
-					{/each}
-				</div>
-				<div
-					role="img"
-					aria-label="Training days over the last {HEATMAP_WEEKS} weeks: {stats.fourWeeks} sessions in the last 4 weeks"
-					class="flex-1 grid gap-[3px]"
-					style="grid-template-columns: repeat({HEATMAP_WEEKS}, minmax(0, 1fr))"
+	<section
+		aria-labelledby="activity-head"
+		class="flex flex-col gap-3 p-4 rounded-2xl bg-surface border-solid border-1 border-hairline"
+	>
+		<div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+			<div class="flex items-center gap-1">
+				<button
+					onclick={() => year--}
+					disabled={year <= firstYear}
+					aria-label="Previous year"
+					class="size-8 rounded-lg border-none bg-surface-3 cursor-pointer flex items-center justify-center disabled:opacity-35 disabled:cursor-default"
 				>
-					{#each heatmap as week}
-						<div class="grid grid-rows-7 gap-[3px]">
-							{#each week as day}
+					<i class="i-tabler-chevron-left block size-4 text-soft"></i>
+				</button>
+				<h2 id="activity-head" class="m-0 w-14 text-center text-[15px] font-semibold font-mono">
+					{year}
+				</h2>
+				<button
+					onclick={() => year++}
+					disabled={year >= thisYear}
+					aria-label="Next year"
+					class="size-8 rounded-lg border-none bg-surface-3 cursor-pointer flex items-center justify-center disabled:opacity-35 disabled:cursor-default"
+				>
+					<i class="i-tabler-chevron-right block size-4 text-soft"></i>
+				</button>
+			</div>
+			<span class="text-[13px] text-subtle">
+				<span class="text-fg font-semibold">{calendar.trained}</span> training day{calendar.trained ===
+				1
+					? ""
+					: "s"}
+				{#if calendar.trained}
+					· <span class="text-fg font-semibold">{calendar.average.toFixed(1)}</span> exercises per day
+				{/if}
+			</span>
+		</div>
+
+		<div
+			role="img"
+			aria-label="{calendar.trained} training days in {year}"
+			class="flex flex-col gap-3"
+		>
+			{#each blocks as weeks}
+				<div class="flex gap-2" aria-hidden="true">
+					<div
+						class="grid grid-rows-[auto_repeat(7,minmax(0,1fr))] gap-[3px] text-[10px] text-faint font-mono shrink-0"
+					>
+						<span class="h-3.5"></span>
+						{#each ["M", "", "W", "", "F", "", "S"] as d}
+							<span class="flex items-center">{d}</span>
+						{/each}
+					</div>
+					<div
+						class="flex-1 min-w-0 grid gap-[3px]"
+						style="grid-template-columns: repeat({columns}, minmax(0, 1fr))"
+					>
+						{#each weeks as week}
+							<span class="h-3.5 text-[10px] leading-none text-faint whitespace-nowrap"
+								>{week.month ?? ""}</span
+							>
+						{/each}
+						{#each { length: 7 } as _, row}
+							{#each weeks as week}
+								{@const day = week.days[row]}
 								<span
-									title={day.future ? undefined : day.label}
-									class="h-[15px] rounded-[3px] {day.future
+									title={day.inYear && !day.future ? day.label : undefined}
+									style="grid-row: {row + 2}"
+									class="aspect-square rounded-[2px] {!day.inYear
 										? 'bg-transparent'
-										: levelClass[day.level]}"
+										: day.future
+											? 'bg-surface-3 opacity-40'
+											: levelClass[day.level]} {day.today ? 'outline outline-1 outline-fg' : ''}"
 								></span>
 							{/each}
-						</div>
-					{/each}
+						{/each}
+					</div>
 				</div>
-			</div>
-			<div class="flex items-center justify-end gap-1 text-[10px] text-faint" aria-hidden="true">
-				less
-				{#each levelClass as cls}
-					<span class="size-[11px] rounded-[2px] {cls}"></span>
-				{/each}
-				more
-			</div>
-		</section>
-	</aside>
+			{/each}
+		</div>
+
+		<div class="flex items-center justify-end gap-1.5 text-[11px] text-faint" aria-hidden="true">
+			<span class="mr-0.5">Exercises per day</span>
+			{#each levelLegend as text, i}
+				<span class="flex items-center gap-1">
+					<span class="size-[11px] rounded-[2px] {levelClass[i + 1]}"></span>{text}
+				</span>
+			{/each}
+		</div>
+	</section>
 
 	<section aria-label="Session history" class="flex-1 min-w-0 flex flex-col gap-5">
 		{#if loaded && sessions.length === 0}
@@ -265,6 +354,7 @@
 								>
 									<a
 										href="/?exercise={entry.id}"
+										data-plain
 										class="sm:w-[38%] shrink-0 min-w-0 truncate no-underline text-[15px] font-semibold hover:text-signal-ink"
 										>{entry.title}</a
 									>

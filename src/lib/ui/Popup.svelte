@@ -29,6 +29,7 @@
 		transition:fade={{ duration: 200 }}
 		onclick={() => (showPopup = false)}
 		aria-label="Close popup"
+		data-plain
 		class="fixed inset-0 h-[100dvh] w-screen border-none bg-black bg-opacity-60 z-40 cursor-pointer"
 	></button>
 

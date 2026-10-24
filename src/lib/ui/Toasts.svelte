@@ -31,6 +31,7 @@
 			<button
 				onclick={() => toast.remove(t.id)}
 				aria-label="Dismiss"
+				data-plain
 				class="i-tabler-x block size-4 shrink-0 opacity-40 hover:opacity-100 border-none bg-transparent cursor-pointer p-0"
 			></button>
 		</div>

@@ -57,7 +57,7 @@
 		{loading ? "Logging in…" : "Log in"}
 	</button>
 	{#snippet footer()}
-		No account yet? <a href="/signup" class="font-semibold no-underline text-signal-ink"
+		No account yet? <a href="/signup" data-plain class="font-semibold no-underline text-signal-ink"
 			>Create one</a
 		>
 	{/snippet}

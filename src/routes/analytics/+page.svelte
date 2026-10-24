@@ -180,7 +180,7 @@
 	const tileValue =
 		"font-display font-semibold text-[22px] leading-[1.2] whitespace-nowrap truncate";
 	const segment = (on: boolean) =>
-		`h-9 px-3.5 rounded-lg border-none cursor-pointer text-sm font-semibold whitespace-nowrap ${on ? "bg-dark text-bg" : "bg-transparent text-soft hover:bg-surface-3"}`;
+		`flex-1 lg:flex-none h-9 px-2 lg:px-3.5 rounded-lg border-none cursor-pointer text-[13px] lg:text-sm font-semibold whitespace-nowrap ${on ? "bg-dark text-bg" : "bg-transparent text-soft hover:bg-surface-3"}`;
 </script>
 
 <svelte:window onkeydown={onWindowKey} />
@@ -231,9 +231,8 @@
 
 	<section class="flex-1 min-w-0 flex flex-col gap-4" aria-label="Progress">
 		{#if selected}
-			<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-				<div class="flex flex-col gap-1 min-w-0 w-full lg:w-auto">
-					<span class="text-sm text-subtle">Analytics</span>
+			<div class="flex items-center lg:items-end justify-between gap-2 lg:gap-6">
+				<div class="flex flex-col gap-1 min-w-0 flex-1">
 					<h1
 						class="hidden lg:block m-0 font-display font-semibold text-[32px] leading-none truncate"
 					>
@@ -257,11 +256,16 @@
 						></i>
 					</label>
 				</div>
+				<!-- Phones: a square icon button matching the exercise picker beside it.
+				     Desktop: a labelled button like "Progress chart" on the exercises page. -->
 				<a
 					href="/?exercise={selected.exercise.id}"
-					class="h-10 px-3.5 rounded-[10px] bg-surface-3 no-underline flex items-center gap-2 text-sm shrink-0"
+					aria-label="Open log"
+					class="size-12 lg:size-auto lg:h-10 lg:px-3.5 rounded-xl lg:rounded-[10px] bg-surface lg:bg-surface-3 border-solid border-1 border-hairline lg:border-transparent no-underline flex items-center justify-center gap-2 text-sm shrink-0"
 				>
-					<i class="i-tabler-notes block size-4"></i>Open log
+					<i class="i-tabler-notes block size-5 lg:size-4"></i><span class="hidden lg:inline"
+						>Open log</span
+					>
 				</a>
 			</div>
 
@@ -269,7 +273,7 @@
 				<div
 					role="group"
 					aria-label="Metric"
-					class="flex gap-1 p-1 rounded-xl bg-surface border-solid border-1 border-hairline overflow-x-auto max-w-full"
+					class="w-full lg:w-auto flex gap-1 p-1 rounded-xl bg-surface border-solid border-1 border-hairline"
 				>
 					{#each METRICS as m}
 						<button
@@ -282,7 +286,7 @@
 				<div
 					role="group"
 					aria-label="Time range"
-					class="flex gap-1 p-1 rounded-xl bg-surface border-solid border-1 border-hairline"
+					class="w-full lg:w-auto flex gap-1 p-1 rounded-xl bg-surface border-solid border-1 border-hairline"
 				>
 					{#each RANGES as r}
 						<button

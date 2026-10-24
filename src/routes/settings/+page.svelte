@@ -220,7 +220,7 @@
 	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 flex flex-col gap-5"
 	style="padding-top: calc(var(--nav-h, 6rem) + 1.25rem)"
 >
-	<h1 class="m-0 font-display font-semibold text-[30px] leading-none">Settings</h1>
+	<h1 class="sr-only">Settings</h1>
 
 	<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-5 items-start">
 		<div class="flex flex-col gap-5">

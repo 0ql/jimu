@@ -64,9 +64,9 @@
 	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 flex flex-col gap-5"
 	style="padding-top: calc(var(--nav-h, 6rem) + 1.25rem)"
 >
-	<header class="flex items-end justify-between gap-4">
+	<header class="flex items-center justify-between gap-4">
 		<div class="flex flex-col gap-0.5">
-			<h1 class="m-0 font-display font-semibold text-[30px] leading-none">Routines</h1>
+			<h1 class="sr-only">Routines</h1>
 			<span class="text-sm text-subtle">
 				{#if $routines.length}
 					{$routines.length} routine{$routines.length === 1 ? "" : "s"} · Train filters your exercise

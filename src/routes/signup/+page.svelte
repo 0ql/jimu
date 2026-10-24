@@ -85,8 +85,10 @@
 		{loading ? "Creating account…" : "Create account"}
 	</button>
 	{#snippet footer()}
-		Already have an account? <a href="/login" class="font-semibold no-underline text-signal-ink"
-			>Log in</a
+		Already have an account? <a
+			href="/login"
+			data-plain
+			class="font-semibold no-underline text-signal-ink">Log in</a
 		>
 	{/snippet}
 </AuthShell>

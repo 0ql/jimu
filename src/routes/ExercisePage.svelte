@@ -35,6 +35,7 @@
 	const showPad = $derived(editor.padOpen && !editor.textKeyboard);
 	let scroller: HTMLElement | undefined = $state();
 	let logSection: HTMLElement | undefined = $state();
+	let headerHeight = $state(64);
 
 	// A save still waiting when the page closes or moves to the next exercise goes out now.
 	onDestroy(editor.flush);
@@ -58,7 +59,7 @@
 		// Park the log under the top bar so the parsed sets stay visible above the keypad.
 		requestAnimationFrame(() => {
 			if (!scroller || !logSection) return;
-			const top = logSection.getBoundingClientRect().top - 56 - 8;
+			const top = logSection.getBoundingClientRect().top - headerHeight;
 			scroller.scrollBy({ top, behavior: "smooth" });
 		});
 	};
@@ -77,7 +78,8 @@
 		onnavigate(id);
 	};
 
-	const statClass = "flex flex-col gap-0.5 px-2.5 py-2 rounded-[10px] bg-surface-2";
+	const statClass =
+		"flex flex-col gap-0.5 px-2.5 py-2 rounded-[10px] bg-surface border-solid border-1 border-hairline";
 	const statValue = "font-display font-semibold text-base leading-[1.2] whitespace-nowrap";
 </script>
 
@@ -88,20 +90,28 @@
 	aria-label={editor.title}
 	class="fixed inset-0 z-[35] bg-bg overflow-y-auto overscroll-contain flex flex-col"
 >
+	<!-- The exercise's name and setup sit in the top bar itself, so the log starts higher up.
+	     The bar is exactly as tall as the list's search bar (--nav-h), so nothing jumps. -->
 	<header
-		class="sticky top-0 z-10 shrink-0 h-14 flex items-center gap-0.5 px-2 bg-bg border-b-solid border-b-1 border-b-rule"
+		bind:offsetHeight={headerHeight}
+		class="sticky top-0 z-10 shrink-0 flex items-center gap-1 pl-1 pr-2 bg-bg border-b-solid border-b-1 border-b-rule"
+		style="height: var(--nav-h, 77px); padding-top: env(safe-area-inset-top)"
 	>
 		<button
 			onclick={back}
 			aria-label="Back to {backLabel}"
-			class="h-10 shrink-0 flex items-center gap-0.5 pl-1 pr-2.5 rounded-[10px] border-none bg-transparent cursor-pointer text-sm text-soft"
+			class="size-10 shrink-0 flex items-center justify-center rounded-[10px] border-none bg-transparent cursor-pointer"
 		>
-			<i class="i-tabler-chevron-left block size-[22px] text-soft"></i>
-			{#if !showPad}{backLabel}{/if}
+			<i class="i-tabler-chevron-left block size-6 text-soft"></i>
 		</button>
-		<span class="flex-1 min-w-0 truncate text-base font-semibold">
-			{#if showPad}{editor.title}{/if}
-		</span>
+		<div class="flex-1 min-w-0 flex flex-col">
+			<h1 class="m-0 font-display font-semibold text-[20px] leading-tight truncate">
+				{editor.title}
+			</h1>
+			{#if editor.note.trim()}
+				<span class="font-mono text-xs text-subtle truncate">{editor.note.trim()}</span>
+			{/if}
+		</div>
 		<a
 			href="/analytics?exercise={exercise.id}"
 			aria-label="Progress chart"
@@ -119,34 +129,15 @@
 	</header>
 
 	<div
-		class="flex-1 px-4 pt-3.5 flex flex-col gap-4"
+		class="flex-1 px-4 flex flex-col gap-4"
 		style="padding-bottom: calc(var(--pad-h, 0px) + 1.5rem)"
 	>
-		<div class="flex flex-col gap-1">
-			<h1 class="m-0 font-display font-semibold text-[26px] leading-[1.15] break-words">
-				{editor.title}
-			</h1>
-			{#if editor.note.trim()}
-				<span class="font-mono text-[12.5px] text-subtle">{editor.note.trim()}</span>
-			{/if}
-		</div>
-
-		<section
-			bind:this={logSection}
-			aria-label="Log"
-			class="flex flex-col gap-2.5 px-3.5 pt-3 pb-3.5 rounded-2xl bg-surface border-solid border-1 border-hairline"
-		>
-			<div class="flex items-center justify-between">
-				<label for="page-log-{exercise.id}" class="text-xs text-subtle"
-					>Log · one line per day</label
-				>
-				<span class="text-xs {editor.isToday ? 'text-signal-ink' : 'text-faint'}">
-					{editor.isToday ? "today" : `last · ${editor.log.current.date ?? "—"}`}
-				</span>
-			</div>
-
+		<section bind:this={logSection} aria-label="Log" class="flex flex-col gap-2.5">
+			<!-- The log runs edge to edge right under the top bar (whose border is its top edge),
+			     so long lines wrap less. -->
 			<textarea
 				id="page-log-{exercise.id}"
+				aria-label="Log, one line per day"
 				bind:this={editor.textarea}
 				bind:value={editor.workoutsString}
 				oninput={editor.saveSoon}
@@ -156,7 +147,7 @@
 				autocomplete="off"
 				inputmode={editor.inputmode}
 				placeholder="{editor.stamp} a10x12 30x10 x8 x7 d15x7"
-				class="w-full min-h-[4lh] max-h-[8lh] overflow-y-auto resize-none rounded-[10px] border-solid border-[1.5px] bg-bg px-3 py-2.5 font-mono text-[15px] leading-[1.65] outline-none placeholder:text-placeholder {showPad
+				class="-mx-4 w-[calc(100%+2rem)] min-h-[4lh] max-h-[8lh] overflow-y-auto resize-none border-solid border-x-0 border-t-0 border-b-[1.5px] bg-surface px-4 py-2.5 font-mono text-[15px] leading-[1.65] outline-none placeholder:text-placeholder {showPad
 					? 'border-signal-ink'
 					: 'border-edge focus:border-signal-ink'}"></textarea>
 

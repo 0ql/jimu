@@ -249,3 +249,50 @@ html {
 ::-webkit-scrollbar-thumb:hover {
 	background-color: var(--ghost);
 }
+
+/* ── Buttons: one hover and press feel across the app ──
+   Hover lays a tint over whatever the background is (even transparent icon buttons) and a
+   press shrinks the button a touch. `scale` composes with any translate a button already uses.
+   Opt out with data-plain (text links, the popup backdrop); the keypad has its own press. */
+:root {
+	--hover-tint: rgba(255, 255, 255, 0.07);
+	--press-tint: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="light"] {
+	--hover-tint: rgba(0, 0, 0, 0.05);
+	--press-tint: rgba(0, 0, 0, 0.09);
+}
+
+:is(button, a[href], [role="button"]):not(
+	:disabled,
+	[aria-disabled="true"],
+	[data-plain],
+	[data-keypad] *
+) {
+	transition-property: background-color, border-color, color, box-shadow, scale, opacity;
+	transition-duration: 120ms;
+	transition-timing-function: ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	:is(button, a[href], [role="button"]):not(
+			:disabled,
+			[aria-disabled="true"],
+			[data-plain],
+			[data-keypad] *
+		):hover {
+		box-shadow: inset 0 0 0 100vmax var(--hover-tint);
+	}
+}
+
+:is(button, a[href], [role="button"]):not(
+		:disabled,
+		[aria-disabled="true"],
+		[data-plain],
+		[data-keypad] *
+	):is(:active, [data-pressed]) {
+	box-shadow: inset 0 0 0 100vmax var(--press-tint);
+	scale: 0.97;
+	transition-duration: 60ms;
+}

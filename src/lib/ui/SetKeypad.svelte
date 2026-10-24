@@ -145,6 +145,7 @@
 	bind:clientHeight={height}
 	role="group"
 	aria-label="Set keypad for {title}"
+	data-keypad
 	class="fixed left-0 right-0 bottom-0 z-30 bg-panel border-t-solid border-t-1 border-t-hairline"
 	style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom))"
 >
