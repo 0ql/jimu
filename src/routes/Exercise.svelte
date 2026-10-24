@@ -45,7 +45,7 @@
 </script>
 
 <div
-	class="border-b-solid border-b-1 border-b-[#222227] last:border-b-0 {open ? 'bg-[#1b1b1f]' : ''}"
+	class="border-b-solid border-b-1 border-b-[#222227] last:border-b-0 {open ? 'bg-[#26262c]' : ''}"
 >
 	<button
 		onclick={ontoggle}
@@ -62,10 +62,6 @@
 			{#if editor.note.trim()}
 				<span class="font-mono text-[12.5px] text-subtle truncate">{editor.note.trim()}</span>
 			{/if}
-			<span class="font-mono text-[12.5px] text-subtle truncate">
-				{#if editor.log.current.date}<span class="text-faint">{editor.log.current.date}</span
-					>&ensp;{/if}{editor.log.current.rest || "No sets yet"}
-			</span>
 		</span>
 		<span class="text-xs text-[#7c7c85] whitespace-nowrap"
 			>{daysAgo(editor.log.current.date, editor.log.current.year)}</span

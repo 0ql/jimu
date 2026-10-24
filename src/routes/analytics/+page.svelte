@@ -211,7 +211,7 @@
 					onclick={() => (selectedId = o.exercise.id!)}
 					aria-current={on ? "true" : undefined}
 					class="w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none border-b-solid border-b-1 border-b-[#1f1f23] last:border-b-0 text-left cursor-pointer {on
-						? 'bg-[#26262c]'
+						? 'bg-[#32323a]'
 						: 'bg-transparent hover:bg-[#1c1c20]'}"
 				>
 					<span

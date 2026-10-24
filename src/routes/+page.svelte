@@ -353,7 +353,7 @@
 							onclick={() => select(exercise.id)}
 							aria-current={isSelected ? "true" : undefined}
 							class="w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none border-b-solid border-b-1 border-b-[#1f1f23] last:border-b-0 text-left cursor-pointer {isSelected
-								? 'bg-[#26262c]'
+								? 'bg-[#32323a]'
 								: 'bg-transparent hover:bg-[#1c1c20]'}"
 						>
 							<span
@@ -367,10 +367,6 @@
 										? 'text-white'
 										: 'text-[#e2e2e6]'}">{exercise.title}</span
 								>
-								<span class="font-mono text-xs text-subtle truncate">
-									{#if current.date}<span class="text-faint">{current.date}</span
-										>&ensp;{/if}{current.rest || "No sets yet"}
-								</span>
 							</span>
 							<span class="text-xs text-[#7c7c85] whitespace-nowrap"
 								>{daysAgo(current.date, current.year)}</span
