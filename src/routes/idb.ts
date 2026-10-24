@@ -1,7 +1,9 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import { isNetworkError, online } from "$lib/network";
+import { isNetworkError, online } from "#lib/network.js";
 import { writable, type Writable } from "svelte/store";
 import { page } from "$app/state";
+import { mergeExercises, mergeRoutines, newId } from "#lib/merge.js";
+import { toast } from "#lib/toast.svelte.js";
 
 export type Exercise = {
 	id?: number;
@@ -19,15 +21,18 @@ export type Routine = {
 
 /**
  * Sync bookkeeping per store (id 1 = exercises, id 2 = routines).
- * `lastChanged` is the server's lastModified of the version this device last synced with,
- * so it is only ever compared with other server timestamps. `dirty` means there are local
- * edits the server has not received yet. Records written before the flag existed have no
- * `dirty` and hold a client-clock time instead.
+ * `lastChanged` is the server's version (its lastModified) this device last synced with; it is
+ * sent with every upload so the server can refuse one based on an older version. `dirty` means
+ * there are local edits the server has not received yet. `base` is the copy of the data as it
+ * was at that version: when the server refuses, the device merges its copy and the server's
+ * against it (see #lib/merge). Records written before the flag existed have no `dirty` and
+ * hold a client-clock time instead; their first upload simply merges.
  */
 export type SyncMeta = {
 	id?: number;
 	lastChanged: number;
 	dirty?: boolean;
+	base?: Exercise[] | Routine[];
 	/** Only on the OWNER_META record: the account this browser's local data belongs to. */
 	owner?: string;
 };
@@ -53,40 +58,57 @@ export const OWNER_META = 3;
 
 export let idb: IDBPDatabase<DB>;
 export const synced = writable(true);
+/** Goes up whenever data is replaced from the server or merged, so open editors reload it. */
+export const dataRevision = writable(0);
 
 export const getSyncMeta = (id: number) => idb.get("meta", id);
-
-export const markSynced = (id: number, lastChanged: number) =>
-	idb.put("meta", { id, lastChanged, dirty: false });
 
 const markDirty = async (id: number) => {
 	const meta = await idb.get("meta", id);
 	await idb.put("meta", { lastChanged: 0, ...meta, id, dirty: true });
 };
 
-export type SyncPlan = "push" | "pull" | "conflict" | "none";
+type Kind = "exercises" | "routines";
+const KINDS = {
+	exercises: {
+		meta: EXERCISES_META,
+		url: "/",
+		merge: (base: Exercise[], local: Exercise[], server: Exercise[]) =>
+			mergeExercises(base, local, server),
+		reload: () => loadExercises(),
+	},
+	routines: {
+		meta: ROUTINES_META,
+		url: "/routines",
+		merge: (base: Routine[], local: Routine[], server: Routine[]) => ({
+			merged: mergeRoutines(base, local, server),
+			conflicts: [] as string[],
+		}),
+		reload: () => loadRoutines(),
+	},
+} as const;
 
-/** What to do on startup, given this device's bookkeeping and the server's lastModified. */
-export const planSync = (meta: SyncMeta | undefined, serverTs: number): SyncPlan => {
-	if (!meta) return serverTs ? "pull" : "none";
-	// Pre-flag record: decide one last time by comparing clocks; the sync then rewrites it.
-	if (meta.dirty === undefined) {
-		if (serverTs > meta.lastChanged) return "pull";
-		if (meta.lastChanged > serverTs) return "push";
-		return "none";
-	}
-	if (meta.dirty) return serverTs > meta.lastChanged ? "conflict" : "push";
-	if (serverTs > meta.lastChanged) return "pull";
-	// The server is behind the version we synced with (e.g. restored database): restore it.
-	if (serverTs < meta.lastChanged) return "push";
-	return "none";
+// Counts local edits, so an edit made while a sync is in flight is never marked as synced.
+const edits: Record<Kind, number> = { exercises: 0, routines: 0 };
+const timers: Record<Kind, ReturnType<typeof setTimeout> | null> = {
+	exercises: null,
+	routines: null,
 };
+// One sync per store at a time (the timer, a reconnect and "Sync now" can all ask at once).
+const queues: Record<Kind, Promise<unknown>> = {
+	exercises: Promise.resolve(),
+	routines: Promise.resolve(),
+};
+const serialized = (kind: Kind, job: () => Promise<unknown>) =>
+	(queues[kind] = queues[kind].then(job, job));
 
-// Edits made while an upload is in flight must keep the store dirty.
-let exerciseEdits = 0;
-let routineEdits = 0;
-
-let syncTimer: ReturnType<typeof setTimeout> | null = null;
+// Open log editors register here so their unsaved typing is written before a sync reads the
+// data; otherwise a save after the sync could put back a pre-merge copy.
+const editors = new Set<() => unknown>();
+export const registerEditor = (flush: () => unknown) => {
+	editors.add(flush);
+	return () => editors.delete(flush);
+};
 
 /**
  * POSTs to the server; null when it can't be reached. Offline is not an error here: the data
@@ -108,60 +130,154 @@ const send = async (url: string, body: unknown) => {
 	}
 };
 
-export const syncToServer = async () => {
-	if (syncTimer) {
-		clearTimeout(syncTimer);
-		syncTimer = null;
+/** GETs the server's copy and its version; null when the server can't be reached. */
+const download = async (url: string) => {
+	try {
+		const res = await fetch(url);
+		online.set(true);
+		if (!res.ok) return null;
+		return {
+			data: await res.json(),
+			lastModified: Number(res.headers.get("x-last-modified") ?? 0),
+		};
+	} catch (error) {
+		if (!isNetworkError(error)) throw error;
+		online.set(false);
+		return null;
 	}
-	const editsAtStart = exerciseEdits;
-	const exercises = await idb.getAll("exercises");
-	const res = await send("/", exercises);
-	if (!res?.ok) return;
-	const { lastModified } = await res.json();
-	if (exerciseEdits === editsAtStart) {
-		await markSynced(EXERCISES_META, lastModified);
-		synced.set(true);
-	} else {
-		await idb.put("meta", { id: EXERCISES_META, lastChanged: lastModified, dirty: true });
+};
+
+/** Replaces a store's contents in one transaction. */
+const replaceAll = async (kind: Kind, items: (Exercise | Routine)[]) => {
+	// idb's typings can't follow a union of store names; both stores hold plain objects.
+	const tx = idb.transaction(kind as "exercises", "readwrite");
+	await tx.store.clear();
+	for (const item of items) await tx.store.put(item as Exercise);
+	await tx.done;
+};
+
+/** Takes the server's copy as is: used when this device has no unsynced edits. */
+const pull = async (kind: Kind) => {
+	const k = KINDS[kind];
+	const editsAtStart = edits[kind];
+	const server = await download(k.url);
+	// Unreachable, or edited while downloading: keep the local copy, it gets uploaded instead.
+	if (!server || edits[kind] !== editsAtStart) return false;
+	await replaceAll(kind, server.data);
+	await idb.put("meta", {
+		id: k.meta,
+		lastChanged: server.lastModified,
+		dirty: false,
+		base: server.data,
+	});
+	if (kind === "exercises") synced.set(true);
+	// Reload first: open editors remount on the new revision and must see the new data.
+	await k.reload();
+	dataRevision.update((n) => n + 1);
+	return true;
+};
+
+const MAX_ATTEMPTS = 3;
+
+/**
+ * Uploads this device's copy, based on the version it last synced with. If the server has a
+ * newer version, the reply carries it: both copies are merged against the last synced one,
+ * stored here, and the merge is uploaded (a few attempts, in case another device keeps
+ * syncing meanwhile). Whatever happens, unsynced edits stay marked dirty until they are in.
+ */
+const upload = async (kind: Kind) => {
+	const k = KINDS[kind];
+	if (timers[kind]) clearTimeout(timers[kind]);
+	timers[kind] = null;
+
+	for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+		if (kind === "exercises") await Promise.all([...editors].map((flush) => flush()));
+		const editsAtStart = edits[kind];
+		const meta = await idb.get("meta", k.meta);
+		const local = await idb.getAll(kind as "exercises");
+		const res = await send(k.url, { base: meta?.lastChanged ?? 0, [kind]: local });
+		if (!res) return; // Offline: stays dirty.
+
+		if (res.ok) {
+			const { lastModified } = await res.json();
+			const editedMeanwhile = edits[kind] !== editsAtStart;
+			await idb.put("meta", {
+				id: k.meta,
+				lastChanged: lastModified,
+				dirty: editedMeanwhile,
+				base: local,
+			});
+			if (kind === "exercises" && !editedMeanwhile) synced.set(true);
+			if (editedMeanwhile) schedule(kind);
+			return;
+		}
+
+		const body = res.status === 409 ? await res.json().catch(() => null) : null;
+		if (!Array.isArray(body?.[kind])) return; // Some other error: try again later.
+		if (edits[kind] !== editsAtStart) continue; // Edited meanwhile: start over, fresh copy.
+
+		// The usual case merges against the last synced copy. If the server is older than the
+		// version this device synced with (its database was restored), lines missing there
+		// weren't deleted by anyone: merging against the server's own copy keeps this device's.
+		const serverIsBehind = body.lastModified < (meta?.lastChanged ?? 0);
+		const base = serverIsBehind ? body[kind] : (meta?.base ?? []);
+		// @ts-expect-error each kind merges its own item type
+		const { merged, conflicts } = k.merge(base, local, body[kind]);
+		await replaceAll(kind, merged);
+		await idb.put("meta", {
+			id: k.meta,
+			lastChanged: body.lastModified,
+			dirty: true,
+			base: body[kind],
+		});
+		await k.reload();
+		dataRevision.update((n) => n + 1);
+		if (conflicts.length) {
+			toast.error(
+				`Both devices logged the same day in ${conflicts.join(", ")}. Both entries were kept, so check the log.`,
+			);
+		} else if (attempt === 0) {
+			toast.success("Merged with changes from another device");
+		}
 	}
 };
 
-const scheduleSync = () => {
-	if (syncTimer) clearTimeout(syncTimer);
-	syncTimer = setTimeout(syncToServer, 3000);
+const schedule = (kind: Kind) => {
+	if (timers[kind]) clearTimeout(timers[kind]);
+	timers[kind] = setTimeout(() => serialized(kind, () => upload(kind)), 3000);
 };
+const scheduleSync = () => schedule("exercises");
+const scheduleRoutineSync = () => schedule("routines");
 
-let routineSyncTimer: ReturnType<typeof setTimeout> | null = null;
+export const syncToServer = () => serialized("exercises", () => upload("exercises"));
+export const syncRoutinesToServer = () => serialized("routines", () => upload("routines"));
 
-export const syncRoutinesToServer = async () => {
-	if (routineSyncTimer) {
-		clearTimeout(routineSyncTimer);
-		routineSyncTimer = null;
-	}
-	const editsAtStart = routineEdits;
-	const all = await idb.getAll("routines");
-	const res = await send("/routines", all);
-	if (!res?.ok) return;
-	const { lastModified } = await res.json();
-	if (routineEdits === editsAtStart) await markSynced(ROUTINES_META, lastModified);
-	else await idb.put("meta", { id: ROUTINES_META, lastChanged: lastModified, dirty: true });
-};
-
-const scheduleRoutineSync = () => {
-	if (routineSyncTimer) clearTimeout(routineSyncTimer);
-	routineSyncTimer = setTimeout(syncRoutinesToServer, 3000);
-};
+/**
+ * The startup sync, given the server's version from the page data. Unsynced edits (or no
+ * record yet) are uploaded, which merges in anything newer; a clean copy is replaced by a
+ * newer server copy. If the server is older than what this device synced with (restored
+ * database), this device's copy is uploaded to bring it back.
+ */
+export const syncOnStart = (kind: Kind, serverVersion: number) =>
+	serialized(kind, async () => {
+		const meta = await idb.get("meta", KINDS[kind].meta);
+		const hasLocal = (await idb.count(kind as "exercises")) > 0;
+		if (!meta && !hasLocal) return pull(kind);
+		if (!meta || meta.dirty !== false) return upload(kind);
+		if (serverVersion > meta.lastChanged) return pull(kind);
+		if (serverVersion < meta.lastChanged) return upload(kind);
+	});
 
 export const exercises: Writable<Exercise[]> = writable([]);
 export const routines: Writable<Routine[]> = writable([]);
 
 const updateMeta = async () => {
-	exerciseEdits++;
+	edits.exercises++;
 	await markDirty(EXERCISES_META);
 };
 
 const updateRoutineMeta = async () => {
-	routineEdits++;
+	edits.routines++;
 	await markDirty(ROUTINES_META);
 };
 
@@ -209,14 +325,13 @@ export const loadExercises = async () => {
 
 export const loadRoutines = async () => {
 	const db = await loadDB();
-	const r = await db.getAll("routines");
-	console.log(r);
-	routines.set(r);
+	routines.set(await db.getAll("routines"));
 };
 
 export const addExercise = async (title: string, workoutsString = "", note = "") => {
 	synced.set(false);
 	const id = await idb.add("exercises", {
+		id: newId(),
 		title,
 		workoutsString,
 		...(note.trim() ? { note: note.trim() } : {}),
@@ -253,7 +368,7 @@ export const deleteExercise = async (exercise: Exercise) => {
 };
 
 export const addRoutine = async (name: string, exerciseIds: number[]) => {
-	await idb.add("routines", { name, exerciseIds: Array.from(exerciseIds) });
+	await idb.add("routines", { id: newId(), name, exerciseIds: Array.from(exerciseIds) });
 	await updateRoutineMeta();
 	await loadRoutines();
 	scheduleRoutineSync();
@@ -299,8 +414,10 @@ export const getAll = async <S extends "meta" | "exercises">(storeName: S) => {
 
 /** Clears the local stores. Takes the open database so it never waits on loadDB(). */
 const clearStores = async (db: IDBPDatabase<DB>) => {
-	if (syncTimer) clearTimeout(syncTimer);
-	if (routineSyncTimer) clearTimeout(routineSyncTimer);
+	for (const kind of ["exercises", "routines"] as const) {
+		if (timers[kind]) clearTimeout(timers[kind]);
+		timers[kind] = null;
+	}
 	await db.clear("exercises");
 	await db.clear("routines");
 	await db.clear("meta");

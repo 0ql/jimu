@@ -1,7 +1,18 @@
 import { tick } from "svelte";
-import { saveExercise, type Exercise } from "./idb";
-import { datedLines, dateStamp, isTodayLine, lineStats, parseLine, parseLog } from "$lib/sets";
-import type { KeypadKey } from "$lib/ui/SetKeypad.svelte";
+import { get } from "svelte/store";
+import { exercises, registerEditor, saveExercise, type Exercise } from "./idb";
+import { mergeExercises } from "#lib/merge.js";
+import { datedLines, dateStamp, isTodayLine, lineStats, parseLine, parseLog } from "#lib/sets.js";
+import type { KeypadKey } from "#lib/ui/SetKeypad.svelte";
+
+type Fields = Pick<Exercise, "title" | "workoutsString" | "note">;
+const fieldsOf = (e: Fields): Fields => ({
+	title: e.title,
+	workoutsString: e.workoutsString,
+	note: e.note?.trim() || undefined,
+});
+const sameFields = (a: Fields, b: Fields) =>
+	a.title === b.title && a.workoutsString === b.workoutsString && (a.note ?? "") === (b.note ?? "");
 
 /**
  * Editing state for one exercise's log, shared by the phone row and the desktop pane:
@@ -54,6 +65,8 @@ export class LogEditor {
 	);
 
 	#exercise: () => Exercise;
+	/** What this editor last loaded or saved; a save only writes what was changed since. */
+	#saved: Fields;
 	#saveTimer: ReturnType<typeof setTimeout> | undefined;
 	/** Where the caret is going while an insert waits for the DOM to update. */
 	#pendingCaret: number | null = null;
@@ -64,23 +77,46 @@ export class LogEditor {
 		this.title = e.title;
 		this.workoutsString = e.workoutsString;
 		this.note = e.note ?? "";
+		this.#saved = fieldsOf(e);
+		// A sync writes out unsaved typing first; the editor leaves the list with its component.
+		$effect(() => registerEditor(this.flush));
 	}
 
-	save = () => {
+	/**
+	 * Writes the edit. Nothing is written unless something was typed since the last save, so an
+	 * editor that is just closing or being replaced never puts back an older copy. If the stored
+	 * exercise changed meanwhile (a sync merged in another device's lines), the edit is merged
+	 * into it instead of overwriting it.
+	 */
+	save = async () => {
 		clearTimeout(this.#saveTimer);
 		this.#saveTimer = undefined;
-		return saveExercise({
-			...this.#exercise(),
+		const mine = fieldsOf({
 			title: this.title,
 			workoutsString: this.workoutsString,
-			note: this.note.trim() || undefined,
+			note: this.note,
 		});
+		if (sameFields(mine, this.#saved)) return;
+
+		const exercise = this.#exercise();
+		const stored = get(exercises).find((e) => e.id === exercise.id) ?? exercise;
+		let next = mine;
+		if (!sameFields(fieldsOf(stored), this.#saved)) {
+			const id = exercise.id;
+			const [merged] = mergeExercises([{ id, ...this.#saved }], [{ id, ...mine }], [stored]).merged;
+			next = merged ? fieldsOf(merged) : mine;
+			this.title = next.title;
+			this.workoutsString = next.workoutsString;
+			this.note = next.note ?? "";
+		}
+		this.#saved = next;
+		await saveExercise({ ...exercise, ...next });
 	};
 
 	/** Saves now if a save is still waiting, e.g. before the editor goes away. */
 	flush = () => {
 		if (this.#saveTimer === undefined) return;
-		this.save();
+		return this.save();
 	};
 
 	saveSoon = () => {

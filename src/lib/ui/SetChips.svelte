@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatWeight, type ParsedSet } from "$lib/sets";
+	import { formatWeight, type ParsedSet } from "#lib/sets.js";
 
 	let { sets, large = false }: { sets: ParsedSet[]; large?: boolean } = $props();
 

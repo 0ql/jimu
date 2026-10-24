@@ -18,10 +18,11 @@
 		type SyncMeta,
 	} from "../idb";
 	import { goto } from "$app/navigation";
-	import Popup from "$lib/ui/Popup.svelte";
+	import Popup from "#lib/ui/Popup.svelte";
 	import Nav from "../Nav.svelte";
-	import { toast } from "$lib/toast.svelte";
-	import { forgetOfflineCache, online } from "$lib/network";
+	import { toast } from "#lib/toast.svelte.js";
+	import { forgetOfflineCache, online } from "#lib/network.js";
+	import { newId } from "#lib/merge.js";
 	import {
 		HAPTIC_STRENGTHS,
 		hapticStrength,
@@ -29,8 +30,8 @@
 		hapticsSupported,
 		previewHaptic,
 		type HapticStrength,
-	} from "$lib/haptics";
-	import { theme, THEMES } from "$lib/theme";
+	} from "#lib/haptics.js";
+	import { theme, THEMES } from "#lib/theme.js";
 
 	let { data } = $props();
 
@@ -105,7 +106,7 @@
 
 	const importData = async () => {
 		if (!importBlocks.length) return;
-		for (const block of importBlocks) await db.add("exercises", block);
+		for (const block of importBlocks) await db.add("exercises", { ...block, id: newId() });
 		await markExercisesChanged();
 		await refreshSyncInfo();
 		toast.success(

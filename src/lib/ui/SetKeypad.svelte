@@ -24,7 +24,7 @@
 	import { onMount } from "svelte";
 	import { pushState } from "$app/navigation";
 	import { page } from "$app/state";
-	import { tapHaptic } from "$lib/haptics";
+	import { tapHaptic } from "#lib/haptics.js";
 
 	let {
 		title = "",

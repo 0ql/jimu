@@ -1,5 +1,5 @@
-import { db } from "$lib/server/db";
-import { users } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/index.js";
+import { users } from "#lib/server/db/schema.js";
 import { count } from "drizzle-orm";
 import type { RequestHandler } from "./$types";
 import argon2 from "@node-rs/argon2";

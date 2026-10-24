@@ -1,7 +1,7 @@
 import { error, json } from "@sveltejs/kit";
 import { count, eq } from "drizzle-orm";
-import { db } from "$lib/server/db";
-import { users } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/index.js";
+import { users } from "#lib/server/db/schema.js";
 import type { RequestHandler } from "./$types";
 
 /** Grant or remove admin rights. Body: { username: string, isAdmin: boolean }. */

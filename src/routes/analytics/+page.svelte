@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import { page } from "$app/state";
 	import { exercises, loadExercises, type Exercise } from "../idb";
-	import { datedLines, formatKg, formatWeight, parseLine, type ParsedSet } from "$lib/sets";
+	import { datedLines, formatKg, formatWeight, parseLine, type ParsedSet } from "#lib/sets.js";
 	import Nav from "../Nav.svelte";
 	import ProgressChart from "./ProgressChart.svelte";
 	import SearchBar from "../SearchBar.svelte";

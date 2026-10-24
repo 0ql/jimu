@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick, untrack } from "svelte";
 	import { addRoutine, deleteRoutine, exercises, saveRoutine, type Routine } from "../idb";
-	import Popup from "$lib/ui/Popup.svelte";
+	import Popup from "#lib/ui/Popup.svelte";
 
 	/** `routine` null creates a new one. */
 	let { routine, showPopup = $bindable(false) }: { routine: Routine | null; showPopup?: boolean } =

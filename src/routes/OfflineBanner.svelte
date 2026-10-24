@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { online } from "$lib/network";
+	import { online } from "#lib/network.js";
 
 	// While it shows, the bars below make room for it via --offline-h (Nav, ExercisePage).
 	$effect(() => {

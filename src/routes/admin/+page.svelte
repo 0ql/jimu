@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from "$app/navigation";
-	import { formatKg } from "$lib/sets";
-	import { toast } from "$lib/toast.svelte";
+	import { formatKg } from "#lib/sets.js";
+	import { toast } from "#lib/toast.svelte.js";
 	import Nav from "../Nav.svelte";
 	import type { PageProps } from "./$types";
 

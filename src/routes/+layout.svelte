@@ -1,15 +1,15 @@
 <script lang="ts">
-	import favicon from "$lib/assets/favicon.svg";
+	import favicon from "#lib/assets/favicon.svg";
 	import "virtual:uno.css";
 	import "./main.css";
-	import Toasts from "$lib/ui/Toasts.svelte";
+	import Toasts from "#lib/ui/Toasts.svelte";
 	import { page } from "$app/state";
 	import TabBar from "./TabBar.svelte";
 	import OfflineBanner from "./OfflineBanner.svelte";
 	import { onMount } from "svelte";
-	import { online, warmOfflineCache } from "$lib/network";
+	import { online, warmOfflineCache } from "#lib/network.js";
 	import { syncPending } from "./idb";
-	import { toast } from "$lib/toast.svelte";
+	import { toast } from "#lib/toast.svelte.js";
 
 	let { children } = $props();
 

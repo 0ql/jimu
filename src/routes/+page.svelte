@@ -3,38 +3,27 @@
 	import { page } from "$app/state";
 	import { pushState, replaceState } from "$app/navigation";
 	import {
-		type DB,
-		type Routine,
 		exercises,
 		routines,
 		loadDB,
 		loadExercises,
 		loadRoutines,
-		synced,
 		addExercise,
-		syncToServer,
-		syncRoutinesToServer,
-		getSyncMeta,
-		markSynced,
-		planSync,
-		EXERCISES_META,
-		ROUTINES_META,
+		dataRevision,
+		syncOnStart,
 		saveRoutine,
 	} from "./idb";
-	import { dateStamp, daysAgo, isTodayLine, parseLog } from "$lib/sets";
-	import type { IDBPDatabase } from "idb";
+	import { dateStamp, daysAgo, isTodayLine, parseLog } from "#lib/sets.js";
 	import type { PageProps } from "./$types";
 
 	import ExerciseDetail from "./ExerciseDetail.svelte";
 	import ExercisePage from "./ExercisePage.svelte";
 	import Nav from "./Nav.svelte";
 	import SearchBar from "./SearchBar.svelte";
-	import Popup from "$lib/ui/Popup.svelte";
-	import { toast } from "$lib/toast.svelte";
-	import { isNetworkError, online } from "$lib/network";
+	import Popup from "#lib/ui/Popup.svelte";
+	import { online } from "#lib/network.js";
 
 	let searchString: string = $state("");
-	let db: IDBPDatabase<DB>;
 	let { data }: PageProps = $props();
 	let showAddPopup = $state(false);
 	let newTitle = $state("");
@@ -44,62 +33,13 @@
 	let nameInput: HTMLInputElement | undefined = $state();
 	let noteInput: HTMLInputElement | undefined = $state();
 	let selectedRoutineId: number | null = $state(null);
-	// Rows copy their exercise into local state, so remount them after a pull from the server.
-	let pullCount = $state(0);
 	// Height of the routine chips bar on phones, so the list's end clears it.
 	let chipsHeight = $state(0);
 	// Empty states wait for IndexedDB so they don't flash on every visit.
 	let loaded = $state(false);
 
-	/** GETs the server's copy; null when the server can't be reached or answers with an error. */
-	const download = async (url: string) => {
-		try {
-			const res = await fetch(url);
-			$online = true;
-			return res.ok ? await res.json() : null;
-		} catch (error) {
-			if (!isNetworkError(error)) throw error;
-			$online = false;
-			return null;
-		}
-	};
-
-	const syncFromServer = async () => {
-		const jsn = await download("/");
-		// Nothing is cleared unless the download worked, so going offline mid-sync loses nothing.
-		if (!jsn) return;
-		await db.clear("exercises");
-		for (const exercise of jsn) {
-			await db.add("exercises", {
-				id: exercise.id,
-				title: exercise.title,
-				workoutsString: exercise.workoutsString,
-				note: exercise.note,
-			});
-		}
-		await markSynced(EXERCISES_META, data.lastModified?.getTime() ?? 0);
-		synced.set(true);
-		await loadExercises();
-		pullCount++;
-	};
-
-	const syncRoutinesFromServer = async () => {
-		const jsn: Routine[] | null = await download("/routines");
-		if (!jsn) return;
-		await db.clear("routines");
-		for (const routine of jsn) {
-			await db.add("routines", {
-				id: routine.id,
-				name: routine.name,
-				exerciseIds: routine.exerciseIds,
-			});
-		}
-		await markSynced(ROUTINES_META, data.routineLastModified?.getTime() ?? 0);
-		await loadRoutines();
-	};
-
 	onMount(async () => {
-		db = await loadDB();
+		await loadDB();
 		await loadExercises();
 		await loadRoutines();
 
@@ -123,36 +63,10 @@
 			return;
 		}
 
-		const serverTs = data.lastModified?.getTime() ?? 0;
-		const plan = planSync(await getSyncMeta(EXERCISES_META), serverTs);
-
-		if ($exercises.length === 0 && serverTs === 0) {
-			toast.success("No Exercises stored locally and none on server");
-		} else if ($exercises.length === 0 && plan !== "push") {
-			toast.success("No Exercises found locally. But Server has Exercises. Syncing from server...");
-			await syncFromServer();
-		} else if (plan === "pull") {
-			toast.success("Changes from another device. Syncing from server...");
-			await syncFromServer();
-		} else if (plan === "conflict") {
-			toast.error("Changed here and on another device. Keeping this device's version.");
-			synced.set(false);
-			await syncToServer();
-		} else if (plan === "push") {
-			synced.set(false);
-			await syncToServer();
-		} else {
-			await markSynced(EXERCISES_META, serverTs);
-		}
-
-		// After a possible first pull, so a new device doesn't claim to have no exercises.
+		await syncOnStart("exercises", data.lastModified?.getTime() ?? 0);
+		// After a possible first download, so a new device doesn't claim to have no exercises.
 		loaded = true;
-
-		const routineServerTs = data.routineLastModified?.getTime() ?? 0;
-		const routinePlan = planSync(await getSyncMeta(ROUTINES_META), routineServerTs);
-		if (routinePlan === "pull") await syncRoutinesFromServer();
-		else if (routinePlan === "push" || routinePlan === "conflict") await syncRoutinesToServer();
-		else if (routineServerTs) await markSynced(ROUTINES_META, routineServerTs);
+		await syncOnStart("routines", data.routineLastModified?.getTime() ?? 0);
 	});
 
 	const activeRoutine = $derived(
@@ -416,7 +330,7 @@
 
 		<section class="flex-1 min-w-0" aria-label="Selected exercise">
 			{#if selected}
-				{#key `${selected.id}:${pullCount}`}
+				{#key `${selected.id}:${$dataRevision}`}
 					<ExerciseDetail bind:this={detail} exercise={selected} onescape={backToList} />
 				{/key}
 			{:else if loaded && $exercises.length === 0}
@@ -474,7 +388,7 @@
 {/if}
 
 {#if pageExercise}
-	{#key `${pageExercise.id}:${pullCount}`}
+	{#key `${pageExercise.id}:${$dataRevision}`}
 		<ExercisePage
 			exercise={pageExercise}
 			backLabel={activeRoutine?.name ?? "Exercises"}

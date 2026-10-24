@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { exercises, loadExercises, type Exercise } from "../idb";
-	import { datedLines, formatKg, lineStats, parseLine, type ParsedSet } from "$lib/sets";
+	import { datedLines, formatKg, lineStats, parseLine, type ParsedSet } from "#lib/sets.js";
 	import Nav from "../Nav.svelte";
 
 	type Entry = {

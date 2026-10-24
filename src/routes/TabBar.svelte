@@ -18,7 +18,7 @@
 <script lang="ts">
 	import { page } from "$app/state";
 	import { synced } from "./idb";
-	import { trackHeight } from "$lib/trackHeight";
+	import { trackHeight } from "#lib/trackHeight.js";
 
 	// The phone tab bar lives in the layout, not in each page, so it stays put while switching
 	// tabs: the pressed tab finishes its press animation instead of being rebuilt mid-tap.

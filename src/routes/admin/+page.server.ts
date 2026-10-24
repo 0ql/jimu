@@ -1,8 +1,8 @@
 import { statSync } from "node:fs";
 import { error } from "@sveltejs/kit";
-import { db } from "$lib/server/db";
-import { exercises, routines, sessions, users } from "$lib/server/db/schema";
-import { datedLines, lineStats, parseLine } from "$lib/sets";
+import { db } from "#lib/server/db/index.js";
+import { exercises, routines, sessions, users } from "#lib/server/db/schema.js";
+import { datedLines, lineStats, parseLine } from "#lib/sets.js";
 import type { PageServerLoad } from "./$types";
 
 const DAY = 86_400_000;

@@ -1,4 +1,4 @@
-import { validateSession } from "$lib/server/session";
+import { validateSession } from "#lib/server/session.js";
 import { redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit/hooks";
 

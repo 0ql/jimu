@@ -1,6 +1,6 @@
-import { db } from "$lib/server/db";
-import { users } from "$lib/server/db/schema";
-import { deleteSession } from "$lib/server/session";
+import { db } from "#lib/server/db/index.js";
+import { users } from "#lib/server/db/schema.js";
+import { deleteSession } from "#lib/server/session.js";
 import type { RequestHandler } from "./$types";
 import { eq } from "drizzle-orm";
 import argon2 from "@node-rs/argon2";

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { exercises, loadExercises, loadRoutines, routines, type Routine } from "../idb";
-	import { daysSince, isTodayLine, formatWeight, lineStats, parseLog } from "$lib/sets";
+	import { daysSince, isTodayLine, formatWeight, lineStats, parseLog } from "#lib/sets.js";
 	import Nav from "../Nav.svelte";
 	import RoutineSheet from "./RoutineSheet.svelte";
 

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { tick } from "svelte";
 	import { type Exercise, routines } from "./idb";
-	import { formatKg, formatWeight, lineStats } from "$lib/sets";
+	import { formatKg, formatWeight, lineStats } from "#lib/sets.js";
 	import { historyDate, LogEditor } from "./logEditor.svelte";
 
-	import SetChips from "$lib/ui/SetChips.svelte";
-	import SetKeypad from "$lib/ui/SetKeypad.svelte";
+	import SetChips from "#lib/ui/SetChips.svelte";
+	import SetKeypad from "#lib/ui/SetKeypad.svelte";
 	import EditExerciseSheet from "./EditExerciseSheet.svelte";
 
 	let { exercise, onescape }: { exercise: Exercise; onescape?: () => void } = $props();

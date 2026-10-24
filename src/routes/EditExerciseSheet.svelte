@@ -8,7 +8,7 @@
 		type Routine,
 	} from "./idb";
 	import type { LogEditor } from "./logEditor.svelte";
-	import Popup from "$lib/ui/Popup.svelte";
+	import Popup from "#lib/ui/Popup.svelte";
 
 	let {
 		exercise,

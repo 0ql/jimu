@@ -1,11 +1,9 @@
 <script lang="ts">
-	import "virtual:uno.css";
-	import "./main.css";
 	import { page } from "$app/state";
 	import { synced, syncToServer } from "./idb";
 	import type { Snippet } from "svelte";
 	import { isActive, links } from "./TabBar.svelte";
-	import { trackHeight } from "$lib/trackHeight";
+	import { trackHeight } from "#lib/trackHeight.js";
 
 	// Desktop has one bar at the top with the sections and the add button. On phones the top only
 	// holds what a page passes in (the exercise search); the tabs are in TabBar, in the layout.

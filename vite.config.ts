@@ -7,12 +7,24 @@ export default defineConfig({
 	plugins: [
 		sveltekit({
 			adapter: adapter(),
-			// SvelteKit 3 replaced $lib with #lib subpath imports; this keeps the existing $lib imports working.
-			alias: { $lib: "src/lib" },
 			// Passed through to vite-plugin-svelte: runes mode for our own components only.
 			dynamicCompileOptions: ({ filename }) =>
 				filename.includes("node_modules") ? undefined : { runes: true },
 		}),
-		UnoCSS(),
+		// SvelteKit doesn't run Vite's transformIndexHtml hook (there is no index.html; the styles
+		// come in through `import "virtual:uno.css"`), so drop it from UnoCSS's plugins to avoid
+		// a warning on every start.
+		...UnoCSS().map(({ transformIndexHtml: _unused, ...plugin }) => plugin),
 	],
+	build: {
+		rolldownOptions: {
+			onLog(level, log, handler) {
+				// "virtual:uno.css" is imported once (src/routes/+layout.svelte), but the client build
+				// resolves that same import twice and UnoCSS warns on any repeat, whoever imports it.
+				if (log.plugin?.startsWith("unocss") && log.message.includes("imported multiple times"))
+					return;
+				handler(level, log);
+			},
+		},
+	},
 });
