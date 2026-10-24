@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { tick } from "svelte";
 	import { type Exercise, routines } from "./idb";
-	import { datedLines, formatKg, formatWeight, lineStats, parseLine } from "$lib/sets";
-	import { LogEditor } from "./logEditor.svelte";
+	import { formatKg, formatWeight, lineStats } from "$lib/sets";
+	import { historyDate, LogEditor } from "./logEditor.svelte";
 
 	import SetChips from "$lib/ui/SetChips.svelte";
 	import SetKeypad from "$lib/ui/SetKeypad.svelte";
@@ -15,39 +15,17 @@
 	const showPad = $derived(editor.padOpen && !editor.textKeyboard);
 
 	const tags = $derived($routines.filter((r) => r.exerciseIds.includes(exercise.id!)));
-	// Each non-empty log line, with its full date (year worked out like on the sessions page).
-	const sessions = $derived.by(() => {
-		const dated = datedLines(editor.workoutsString);
-		let next = 0;
-		return editor.workoutsString
-			.split("\n")
-			.filter((l) => l.trim())
-			.map((line) => {
-				const parsed = parseLine(line);
-				return { ...parsed, fullDate: parsed.date ? (dated[next++]?.date ?? null) : null };
-			});
-	});
-	const historyDate = (entry: (typeof sessions)[number]) =>
-		entry.fullDate
-			? entry.fullDate.toLocaleDateString("de-DE", {
-					day: "2-digit",
-					month: "2-digit",
-					year: "2-digit",
-				})
-			: (entry.date ?? "—");
 	const counts = $derived({
 		work: editor.log.current.sets.filter((s) => s.kind === "work").length,
 		drop: editor.log.current.sets.filter((s) => s.kind === "drop").length,
 	});
 	const bars = $derived.by(() => {
-		const recent = sessions.slice(-8).map((p) => ({
-			date: p.date?.slice(0, 5) ?? "—",
-			volume: lineStats(p.sets).volume,
+		const max = Math.max(1, ...editor.recent.map((b) => b.volume));
+		return editor.recent.map((b) => ({
+			...b,
+			height: Math.max(4, Math.round((b.volume / max) * 110)),
 		}));
-		const max = Math.max(1, ...recent.map((b) => b.volume));
-		return recent.map((b) => ({ ...b, height: Math.max(4, Math.round((b.volume / max) * 110)) }));
 	});
-	const history = $derived(sessions.slice(0, -1).reverse());
 
 	// Show the newest lines when an exercise opens.
 	$effect(() => {
@@ -238,7 +216,7 @@
 				class="p-[18px] rounded-2xl bg-surface border-solid border-1 border-hairline flex flex-col gap-1"
 			>
 				<h2 class="m-0 mb-1.5 text-[15px] font-semibold">History</h2>
-				{#each history as entry}
+				{#each editor.history as entry}
 					<div class="flex items-baseline gap-3 py-2 border-t-solid border-t-1 border-t-[#222227]">
 						<span class="font-mono text-xs text-faint shrink-0">{historyDate(entry)}</span>
 						<span class="flex-1 min-w-0 font-mono text-[13px] text-[#c9c9cf] truncate"

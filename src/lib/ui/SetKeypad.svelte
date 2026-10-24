@@ -21,6 +21,9 @@
 </script>
 
 <script lang="ts">
+	import { onMount } from "svelte";
+	import { pushState } from "$app/navigation";
+	import { page } from "$app/state";
 	import { tapHaptic } from "$lib/haptics";
 
 	let {
@@ -38,6 +41,20 @@
 		onabc: () => void;
 		ondone: () => void;
 	} = $props();
+
+	// The open keypad is a history entry, so the phone's Back button closes it instead of leaving
+	// the page. Closing it any other way (Done, abc) takes that entry back out.
+	let pushed = false;
+	onMount(() => {
+		pushState("", { ...page.state, keypad: true });
+		return () => {
+			if (page.state.keypad) history.back();
+		};
+	});
+	$effect(() => {
+		if (page.state.keypad) pushed = true;
+		else if (pushed) ondone();
+	});
 
 	// The page pads its bottom by the keypad's height so nothing hides behind it.
 	let height = $state(0);

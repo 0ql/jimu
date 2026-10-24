@@ -92,6 +92,8 @@ html {
 body {
 	margin: 0;
 	background-color: var(--background);
+	/* Room for the phone tab bar at the bottom (0 on desktop). */
+	padding-bottom: var(--tab-h, 0px);
 }
 
 textarea {

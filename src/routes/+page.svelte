@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from "svelte";
 	import { page } from "$app/state";
+	import { pushState, replaceState } from "$app/navigation";
 	import {
 		type DB,
 		type Routine,
@@ -24,8 +25,8 @@
 	import type { IDBPDatabase } from "idb";
 	import type { PageProps } from "./$types";
 
-	import ExerciseComponent from "./Exercise.svelte";
 	import ExerciseDetail from "./ExerciseDetail.svelte";
+	import ExercisePage from "./ExercisePage.svelte";
 	import Nav from "./Nav.svelte";
 	import SearchBar from "./SearchBar.svelte";
 	import Popup from "$lib/ui/Popup.svelte";
@@ -91,14 +92,11 @@
 			selectedRoutineId = routineParam;
 		}
 
-		// Sessions link here with ?exercise=<id>: select it on desktop, open it on phones.
+		// Sessions link here with ?exercise=<id>: select it on desktop, open its page on phones.
 		const exerciseParam = Number(page.url.searchParams.get("exercise"));
 		if (exerciseParam && $exercises.some((e) => e.id === exerciseParam)) {
 			selectedId = exerciseParam;
-			openId = exerciseParam;
-			await tick();
-			if (!wide)
-				document.getElementById(`log-${exerciseParam}`)?.scrollIntoView({ block: "center" });
+			if (!wide) openPage(exerciseParam);
 		}
 
 		const serverTs = data.lastModified?.getTime() ?? 0;
@@ -149,10 +147,13 @@
 					.includes(searchString.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""));
 				return inRoutine && matchesSearch;
 			})
-			.sort((a, b) => a.title.localeCompare(b.title)),
+			// A routine keeps its own order; otherwise alphabetical.
+			.sort((a, b) =>
+				activeRoutine
+					? activeRoutine.exerciseIds.indexOf(a.id!) - activeRoutine.exerciseIds.indexOf(b.id!)
+					: a.title.localeCompare(b.title),
+			),
 	);
-
-	let openId: number | null = $state(null);
 
 	// Wide screens get the two-pane layout: list on the left, the selected exercise on the right.
 	let wide = $state(false);
@@ -185,6 +186,38 @@
 		const next = Math.min(visibleExercises.length - 1, Math.max(0, i + step));
 		select(visibleExercises[next].id);
 	};
+
+	// Phones open an exercise as its own page. It is a history entry on top of the list
+	// (shallow routing), so Back returns to the list with its scroll and search untouched.
+	const openPage = (id: number) => pushState("", { exercise: id });
+	const closePage = () => history.back();
+	const pageExercise = $derived(
+		wide || page.state.exercise === undefined
+			? null
+			: ($exercises.find((e) => e.id === page.state.exercise) ?? null),
+	);
+	// Deleted from its own page: leave it.
+	$effect(() => {
+		if (loaded && !wide && page.state.exercise !== undefined && !pageExercise) closePage();
+	});
+
+	/** Where the open page sits in the active routine, for the previous/next buttons. */
+	const routineNav = $derived.by(() => {
+		if (!activeRoutine || !pageExercise) return null;
+		const byId = new Map($exercises.map((e) => [e.id, e]));
+		const list = [...new Set(activeRoutine.exerciseIds)]
+			.map((id) => byId.get(id))
+			.filter((e) => e !== undefined)
+			.map((e) => ({ id: e.id!, title: e.title }));
+		const i = list.findIndex((e) => e.id === pageExercise.id);
+		if (i === -1) return null;
+		return {
+			position: i + 1,
+			total: list.length,
+			prev: list[i - 1] ?? null,
+			next: list[i + 1] ?? null,
+		};
+	});
 
 	const backToList = () => {
 		(listEl?.querySelector(`[data-id="${selected?.id}"]`) as HTMLElement | null)?.focus();
@@ -254,8 +287,8 @@
 		newTitle = "";
 		newNote = "";
 		showAddPopup = false;
-		openId = id;
-		if (wide) {
+		if (!wide) openPage(id);
+		else {
 			searchString = "";
 			await select(id);
 			detail?.focusLog();
@@ -410,12 +443,30 @@
 
 		{#if visibleExercises.length > 0}
 			<div class="rounded-2xl bg-surface border-solid border-1 border-hairline overflow-hidden">
-				{#each visibleExercises as exercise (`${exercise.id}:${pullCount}`)}
-					<ExerciseComponent
-						{exercise}
-						open={openId === exercise.id}
-						ontoggle={() => (openId = openId === exercise.id ? null : exercise.id!)}
-					/>
+				{#each visibleExercises as exercise (exercise.id)}
+					{@const current = parseLog(exercise.workoutsString).current}
+					<button
+						onclick={() => openPage(exercise.id!)}
+						class="w-full min-h-16 flex items-center gap-2.5 pl-3.5 pr-2 py-3 border-none border-b-solid border-b-1 border-b-[#222227] last:border-b-0 bg-transparent active:bg-[#26262c] text-left cursor-pointer"
+					>
+						<span
+							class="size-2 rounded-full shrink-0 {isTodayLine(current) && current.sets.length
+								? 'bg-signal'
+								: 'bg-[#2e2e34]'}"
+						></span>
+						<span class="flex-1 min-w-0 flex flex-col gap-[3px]">
+							<span class="text-base font-semibold truncate">{exercise.title}</span>
+							{#if exercise.note?.trim()}
+								<span class="font-mono text-[12.5px] text-subtle truncate"
+									>{exercise.note.trim()}</span
+								>
+							{/if}
+						</span>
+						<span class="text-xs text-[#7c7c85] whitespace-nowrap"
+							>{daysAgo(current.date, current.year)}</span
+						>
+						<i class="i-tabler-chevron-right block size-[18px] shrink-0 text-[#4a4a52]"></i>
+					</button>
 				{/each}
 			</div>
 		{:else if searchString.trim()}
@@ -427,6 +478,18 @@
 			<p class="text-subtle text-center py-8">No exercises yet. Tap + to add your first one.</p>
 		{/if}
 	</main>
+{/if}
+
+{#if pageExercise}
+	{#key `${pageExercise.id}:${pullCount}`}
+		<ExercisePage
+			exercise={pageExercise}
+			backLabel={activeRoutine?.name ?? "Exercises"}
+			routine={routineNav}
+			onback={closePage}
+			onnavigate={(id) => replaceState("", { exercise: id })}
+		/>
+	{/key}
 {/if}
 
 <Popup title="New exercise" bind:showPopup={showAddPopup}>

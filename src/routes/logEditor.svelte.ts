@@ -1,6 +1,6 @@
 import { tick } from "svelte";
 import { saveExercise, type Exercise } from "./idb";
-import { dateStamp, isTodayLine, lineStats, parseLog } from "$lib/sets";
+import { datedLines, dateStamp, isTodayLine, lineStats, parseLine, parseLog } from "$lib/sets";
 import type { KeypadKey } from "$lib/ui/SetKeypad.svelte";
 
 /**
@@ -28,6 +28,27 @@ export class LogEditor {
 			: null,
 	);
 	sessionCount = $derived(this.workoutsString.split("\n").filter((l) => l.trim()).length);
+	/** Each non-empty log line, with its full date (year worked out like on the sessions page). */
+	sessions = $derived.by(() => {
+		const dated = datedLines(this.workoutsString);
+		let next = 0;
+		return this.workoutsString
+			.split("\n")
+			.filter((l) => l.trim())
+			.map((line) => {
+				const parsed = parseLine(line);
+				return { ...parsed, fullDate: parsed.date ? (dated[next++]?.date ?? null) : null };
+			});
+	});
+	/** Earlier sessions, newest first. */
+	history = $derived(this.sessions.slice(0, -1).reverse());
+	/** Volume of the last eight sessions, oldest first, for the bar charts. */
+	recent = $derived(
+		this.sessions.slice(-8).map((p) => ({
+			date: p.date?.slice(0, 5) ?? "—",
+			volume: lineStats(p.sets).volume,
+		})),
+	);
 	inputmode: "text" | "none" | "decimal" = $derived(
 		this.textKeyboard ? "text" : this.touch ? "none" : "decimal",
 	);
@@ -47,12 +68,19 @@ export class LogEditor {
 
 	save = () => {
 		clearTimeout(this.#saveTimer);
+		this.#saveTimer = undefined;
 		return saveExercise({
 			...this.#exercise(),
 			title: this.title,
 			workoutsString: this.workoutsString,
 			note: this.note.trim() || undefined,
 		});
+	};
+
+	/** Saves now if a save is still waiting, e.g. before the editor goes away. */
+	flush = () => {
+		if (this.#saveTimer === undefined) return;
+		this.save();
 	};
 
 	saveSoon = () => {
@@ -146,3 +174,13 @@ export class LogEditor {
 		this.textKeyboard = false;
 	};
 }
+
+/** A history entry's date as dd.mm.yy, or as written when the year is unknown. */
+export const historyDate = (entry: { date: string | null; fullDate: Date | null }) =>
+	entry.fullDate
+		? entry.fullDate.toLocaleDateString("de-DE", {
+				day: "2-digit",
+				month: "2-digit",
+				year: "2-digit",
+			})
+		: (entry.date ?? "—");

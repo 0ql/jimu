@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from "svelte";
+	import { tick, untrack } from "svelte";
 	import { addRoutine, deleteRoutine, exercises, saveRoutine, type Routine } from "../idb";
 	import Popup from "$lib/ui/Popup.svelte";
 
@@ -8,7 +8,12 @@
 		$props();
 
 	let name = $state(untrack(() => routine?.name ?? ""));
-	let ids = $state<number[]>(untrack(() => [...(routine?.exerciseIds ?? [])]));
+	// The routine's order, minus duplicates and exercises that no longer exist.
+	let ids = $state<number[]>(
+		untrack(() => [
+			...new Set((routine?.exerciseIds ?? []).filter((id) => $exercises.some((e) => e.id === id))),
+		]),
+	);
 	let query = $state("");
 	let confirmDelete = $state(false);
 
@@ -19,8 +24,49 @@
 			.sort((a, b) => a.title.localeCompare(b.title)),
 	);
 
+	const titles = $derived(new Map($exercises.map((e) => [e.id, e.title])));
+
 	const toggle = (id: number) =>
 		(ids = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+
+	const moveItem = (from: number, to: number) => {
+		if (from === to || to < 0 || to >= ids.length) return;
+		const next = [...ids];
+		next.splice(to, 0, ...next.splice(from, 1));
+		ids = next;
+	};
+
+	// Drag by the handle: the row under the finger swaps places with the dragged one.
+	let dragIndex: number | null = $state(null);
+	let orderList: HTMLElement | undefined = $state();
+
+	const startDrag = (e: PointerEvent, index: number) => {
+		if (e.button !== 0) return;
+		e.preventDefault();
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		dragIndex = index;
+	};
+
+	const drag = (e: PointerEvent) => {
+		if (dragIndex === null || !orderList) return;
+		const rows = [...orderList.children];
+		const under = rows.findIndex((row) => e.clientY < row.getBoundingClientRect().bottom);
+		const to = under === -1 ? rows.length - 1 : under;
+		moveItem(dragIndex, to);
+		dragIndex = to;
+	};
+
+	const endDrag = () => (dragIndex = null);
+
+	const moveByKey = async (e: KeyboardEvent, index: number) => {
+		if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+		e.preventDefault();
+		const to = index + (e.key === "ArrowUp" ? -1 : 1);
+		moveItem(index, to);
+		// Moving the row drops focus; keep it on the handle so the arrows can keep going.
+		await tick();
+		orderList?.children[to]?.querySelector("button")?.focus();
+	};
 
 	const save = async () => {
 		if (!name.trim()) return;
@@ -60,11 +106,59 @@
 			/>
 		</div>
 
+		{#if ids.length > 0}
+			<div class="flex flex-col gap-2 min-w-0">
+				<div class="flex justify-between text-xs text-subtle">
+					<span id="routine-order">Order · {ids.length} exercise{ids.length === 1 ? "" : "s"}</span>
+					<span
+						>drag <i class="i-tabler-grip-vertical inline-block size-3 align-[-2px]"></i> to move</span
+					>
+				</div>
+				<ol
+					bind:this={orderList}
+					aria-labelledby="routine-order"
+					class="m-0 p-0 list-none rounded-xl border-solid border-1 border-hairline bg-bg"
+				>
+					{#each ids as id, i (id)}
+						<li
+							class="flex items-center gap-1 h-11 pr-1 border-b-solid border-b-1 border-b-[#1f1f23] last:border-b-0 {dragIndex ===
+							i
+								? 'bg-[#26262c]'
+								: ''}"
+						>
+							<button
+								type="button"
+								aria-label="Move {titles.get(id)}, {i + 1} of {ids.length}. Arrow keys move it."
+								onpointerdown={(e) => startDrag(e, i)}
+								onpointermove={drag}
+								onpointerup={endDrag}
+								onpointercancel={endDrag}
+								onkeydown={(e) => moveByKey(e, i)}
+								class="size-11 shrink-0 border-none bg-transparent flex items-center justify-center touch-none {dragIndex ===
+								i
+									? 'cursor-grabbing'
+									: 'cursor-grab'}"
+							>
+								<i class="i-tabler-grip-vertical block size-[18px] text-faint"></i>
+							</button>
+							<span class="w-5 shrink-0 font-mono text-xs text-faint">{i + 1}</span>
+							<span class="flex-1 min-w-0 truncate text-[15px]">{titles.get(id)}</span>
+							<button
+								type="button"
+								onclick={() => toggle(id)}
+								aria-label="Remove {titles.get(id)}"
+								class="size-9 shrink-0 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center"
+							>
+								<i class="i-tabler-x block size-4 text-subtle"></i>
+							</button>
+						</li>
+					{/each}
+				</ol>
+			</div>
+		{/if}
+
 		<fieldset class="m-0 p-0 border-none flex flex-col gap-2 min-w-0">
-			<legend class="w-full p-0 mb-2 flex justify-between text-xs text-subtle">
-				<span>Exercises</span>
-				<span class="font-mono">{ids.length} selected</span>
-			</legend>
+			<legend class="w-full p-0 mb-2 text-xs text-subtle">Add exercises</legend>
 			<label
 				class="flex items-center gap-2 h-10 px-3 rounded-[10px] bg-bg border-solid border-1 border-[#2e2e34]"
 			>

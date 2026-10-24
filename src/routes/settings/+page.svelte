@@ -238,6 +238,16 @@
 						<i class="i-tabler-pencil block size-4"></i>Edit
 					</button>
 				</div>
+				{#if data.isAdmin}
+					<a href="/admin" class="{row} {divider} no-underline">
+						<i class="i-tabler-shield-half block size-5 text-subtle shrink-0"></i>
+						<div class="flex-1 min-w-0 flex flex-col">
+							<span>Admin</span>
+							<span class="text-xs text-subtle">Users, roles and app stats</span>
+						</div>
+						<i class="i-tabler-chevron-right block size-[18px] text-faint shrink-0"></i>
+					</a>
+				{/if}
 				<div class="{row} {divider}">
 					<i class="i-tabler-logout block size-5 text-subtle shrink-0"></i>
 					<span class="flex-1">Log out of this device</span>

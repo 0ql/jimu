@@ -42,8 +42,7 @@
 						days: daysSince(current.date, current.year),
 						top: top ? `${formatWeight(top.weight)}×${top.reps}` : "",
 					};
-				})
-				.sort((a, b) => a.title.localeCompare(b.title));
+				});
 			const known = items.map((i) => i.days).filter((d) => d !== null);
 			const lastDays = known.length ? Math.min(...known) : null;
 			return {
