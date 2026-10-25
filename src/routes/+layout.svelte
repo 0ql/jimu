@@ -17,7 +17,8 @@
 	// document.title when such a page mounts but never puts the old one back, so "Log in" stuck
 	// around after logging in.
 	const TITLES: Record<string, string> = {
-		"/": "Exercises",
+		"/": "Home",
+		"/exercises": "Exercises",
 		"/sessions": "Sessions",
 		"/routines": "Routines",
 		"/analytics": "Analytics",

@@ -259,7 +259,7 @@
 				<!-- Phones: a square icon button matching the exercise picker beside it.
 				     Desktop: a labelled button like "Progress chart" on the exercises page. -->
 				<a
-					href="/?exercise={selected.exercise.id}"
+					href="/exercises?exercise={selected.exercise.id}"
 					aria-label="Open log"
 					class="size-12 lg:size-auto lg:h-10 lg:px-3.5 rounded-xl lg:rounded-[10px] bg-surface lg:bg-surface-3 border-solid border-1 border-hairline lg:border-transparent no-underline flex items-center justify-center gap-2 text-sm shrink-0"
 				>

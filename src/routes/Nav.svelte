@@ -2,7 +2,7 @@
 	import { page } from "$app/state";
 	import { synced, syncToServer } from "./idb";
 	import type { Snippet } from "svelte";
-	import { isActive, links } from "./TabBar.svelte";
+	import { isActive, tabs } from "./TabBar.svelte";
 	import { trackHeight } from "#lib/trackHeight.js";
 
 	// Desktop has one bar at the top with the sections and the add button. On phones the top only
@@ -39,17 +39,7 @@
 >
 	<header class="hidden lg:flex items-center w-full max-w-[1376px] mx-auto">
 		<div class="flex items-center flex-1 gap-1">
-			<a
-				href="/"
-				aria-current={page.url.pathname === "/" ? "page" : undefined}
-				class="flex h-10 px-3.5 rounded-[10px] items-center gap-2 no-underline text-[15px] {page.url
-					.pathname === '/'
-					? 'bg-surface-3 font-semibold'
-					: 'text-soft'}"
-			>
-				<i class="i-tabler-barbell block size-[18px]"></i>Exercises
-			</a>
-			{#each links as link}
+			{#each tabs as link}
 				{@const active = isActive(page.url.pathname, link.href)}
 				<a
 					href={link.href}

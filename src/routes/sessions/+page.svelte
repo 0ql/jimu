@@ -1,157 +1,32 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-	import { exercises, loadExercises, type Exercise } from "../idb";
-	import { datedLines, formatKg, lineStats, parseLine, type ParsedSet } from "#lib/sets.js";
+	import { onMount, tick } from "svelte";
+	import { exercises, loadExercises, loadRoutines, routines } from "../idb";
+	import { formatKg, type ParsedSet } from "#lib/sets.js";
+	import { parseSessions, type Session } from "#lib/sessions.js";
+	import { trainedDates } from "#lib/splits.js";
+	import { routineBadges } from "#lib/routineBadges.js";
+	import RoutineChip from "#lib/ui/RoutineChip.svelte";
 	import Nav from "../Nav.svelte";
-
-	type Entry = {
-		id: number;
-		title: string;
-		tokens: { text: string; kind: ParsedSet["kind"] }[];
-		volume: number;
-	};
-	type Session = { date: Date; key: string; entries: Entry[]; volume: number };
 
 	let loaded = $state(false);
 	onMount(async () => {
-		await loadExercises();
+		await Promise.all([loadExercises(), loadRoutines()]);
 		loaded = true;
+		// Opened from a day in the home calendar (/sessions#2026-10-23): go to that day once the
+		// list is there, since the browser looked for it before the data had loaded.
+		await tick();
+		const day = location.hash.slice(1);
+		if (day) document.getElementById(day)?.scrollIntoView({ block: "start" });
 	});
 
-	const dayKey = (d: Date) =>
-		`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-	const parseSessions = (all: Exercise[]): Session[] => {
-		const map = new Map<string, Session>();
-		for (const exercise of all) {
-			for (const { date, line: row } of datedLines(exercise.workoutsString)) {
-				const { rest, sets } = parseLine(row);
-				if (!sets.length) continue;
-				const key = dayKey(date);
-				if (!map.has(key)) map.set(key, { date, key, entries: [], volume: 0 });
-				const session = map.get(key)!;
-				const volume = lineStats(sets).volume;
-				// Show the sets as typed (x8 stays x8), colored by kind.
-				const tokens = rest
-					.split(/\s+/)
-					.filter(Boolean)
-					.map((text, i) => ({ text, kind: sets[i].kind }));
-				// The same day written twice in one log becomes one row (the list is keyed by exercise).
-				const existing = session.entries.find((e) => e.id === exercise.id);
-				if (existing) {
-					existing.tokens.push(...tokens);
-					existing.volume += volume;
-				} else {
-					session.entries.push({ id: exercise.id!, title: exercise.title, tokens, volume });
-				}
-				session.volume += volume;
-			}
-		}
-		for (const s of map.values()) s.entries.sort((a, b) => a.title.localeCompare(b.title));
-		return [...map.values()].sort((a, b) => b.date.getTime() - a.date.getTime());
-	};
-
 	const sessions = $derived(parseSessions($exercises));
+	const badges = $derived(routineBadges($routines));
+	const trained = $derived(trainedDates({ routines: $routines, exercises: $exercises }));
+	/** The routines a day was counted for. */
+	const routinesOn = (key: string) => $routines.filter((r) => trained.get(r.id!)?.includes(key));
 
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
-	const daysBack = (n: number) => new Date(today.getTime() - n * 86400000);
-	const mondayOffset = (today.getDay() + 6) % 7;
-
-	const stats = $derived.by(() => {
-		const weekStart = daysBack(mondayOffset);
-		const fourWeeks = daysBack(27);
-		const recent = sessions.filter((s) => s.date >= fourWeeks);
-		return {
-			week: sessions.filter((s) => s.date >= weekStart).length,
-			fourWeeks: recent.length,
-			avgVolume: recent.length ? recent.reduce((sum, s) => sum + s.volume, 0) / recent.length : 0,
-		};
-	});
-
-	// The activity calendar shows one calendar year: a column per week (Monday on top), a square
-	// per day, shaded by how many exercises were logged that day.
-	const DAY = 86400000;
-	const thisYear = today.getFullYear();
-	const firstYear = $derived(Math.min(thisYear, ...sessions.map((s) => s.date.getFullYear())));
-	let year = $state(thisYear);
-
-	const levelFor = (count: number) => (count >= 7 ? 4 : count >= 5 ? 3 : count >= 3 ? 2 : 1);
-	const levelLegend = ["1–2", "3–4", "5–6", "7+"];
-	const levelClass = [
-		"bg-surface-3",
-		"bg-[rgba(215,245,90,0.25)]",
-		"bg-[rgba(215,245,90,0.45)]",
-		"bg-[rgba(215,245,90,0.7)]",
-		"bg-signal",
-	];
-
-	const calendar = $derived.by(() => {
-		const byKey = new Map(sessions.map((s) => [s.key, s]));
-		const jan1 = new Date(year, 0, 1);
-		const start = new Date(year, 0, 1 - ((jan1.getDay() + 6) % 7));
-		const dec31 = new Date(year, 11, 31);
-		const end = new Date(year, 11, 31 + ((7 - dec31.getDay()) % 7));
-		const weeks: {
-			month: string | null;
-			days: { inYear: boolean; future: boolean; today: boolean; level: number; label: string }[];
-		}[] = [];
-		let trained = 0;
-		let exerciseCount = 0;
-		for (
-			let d = new Date(start);
-			d <= end;
-			d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7)
-		) {
-			const days = [];
-			let month: string | null = null;
-			for (let i = 0; i < 7; i++) {
-				const date = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i);
-				const inYear = date.getFullYear() === year;
-				if (inYear && date.getDate() === 1) {
-					month = date.toLocaleDateString("en-US", { month: "short" });
-				}
-				const session = inYear ? byKey.get(dayKey(date)) : undefined;
-				const count = session?.entries.length ?? 0;
-				if (count) {
-					trained++;
-					exerciseCount += count;
-				}
-				days.push({
-					inYear,
-					future: date > today,
-					today: date.getTime() === today.getTime(),
-					level: count ? levelFor(count) : 0,
-					label: `${date.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "2-digit" })}: ${
-						count ? `${count} exercise${count === 1 ? "" : "s"}` : "rest"
-					}`,
-				});
-			}
-			weeks.push({ month, days });
-		}
-		return {
-			weeks,
-			trained,
-			average: trained ? exerciseCount / trained : 0,
-		};
-	});
-
-	// Phones show the year as two half-years stacked, so every day stays visible without
-	// scrolling and the squares stay big enough to read.
-	let narrow = $state(false);
-	$effect(() => {
-		const mq = window.matchMedia("(max-width: 767px)");
-		narrow = mq.matches;
-		const onChange = (e: MediaQueryListEvent) => (narrow = e.matches);
-		mq.addEventListener("change", onChange);
-		return () => mq.removeEventListener("change", onChange);
-	});
-	const blocks = $derived.by(() => {
-		if (!narrow) return [calendar.weeks];
-		const july = calendar.weeks.findIndex((w) => w.month === "Jul");
-		return [calendar.weeks.slice(0, july), calendar.weeks.slice(july)];
-	});
-	const columns = $derived(Math.max(...blocks.map((b) => b.length)));
 
 	const months = $derived.by(() => {
 		const groups: { label: string; sessions: Session[] }[] = [];
@@ -183,121 +58,13 @@
 	class="lg:max-w-[1408px] lg:mx-auto lg:px-4 pb-10 flex flex-col gap-6"
 	style="padding-top: calc(var(--nav-h, 6rem) + 1.25rem)"
 >
-	<h1 class="sr-only">Sessions</h1>
-	<div>
-		<div class="grid grid-cols-3 gap-2 lg:w-[460px]">
-			<div
-				class="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-surface border-solid border-1 border-hairline"
-			>
-				<span class="text-xs text-subtle">This week</span>
-				<span class="font-display font-semibold text-[22px] leading-[1.2]">{stats.week}</span>
-			</div>
-			<div
-				class="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-surface border-solid border-1 border-hairline"
-			>
-				<span class="text-xs text-subtle">4 weeks</span>
-				<span class="font-display font-semibold text-[22px] leading-[1.2]">{stats.fourWeeks}</span>
-			</div>
-			<div
-				class="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-surface border-solid border-1 border-hairline"
-			>
-				<span class="text-xs text-subtle">Avg volume</span>
-				<span class="font-display font-semibold text-[22px] leading-[1.2] whitespace-nowrap"
-					>{formatKg(stats.avgVolume)}<span class="text-base text-subtle">&nbsp;kg</span></span
-				>
-			</div>
-		</div>
-	</div>
-
-	<section
-		aria-labelledby="activity-head"
-		class="flex flex-col gap-3 p-4 rounded-2xl bg-surface border-solid border-1 border-hairline"
-	>
-		<div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-			<div class="flex items-center gap-1">
-				<button
-					onclick={() => year--}
-					disabled={year <= firstYear}
-					aria-label="Previous year"
-					class="size-8 rounded-lg border-none bg-surface-3 cursor-pointer flex items-center justify-center disabled:opacity-35 disabled:cursor-default"
-				>
-					<i class="i-tabler-chevron-left block size-4 text-soft"></i>
-				</button>
-				<h2 id="activity-head" class="m-0 w-14 text-center text-[15px] font-semibold font-mono">
-					{year}
-				</h2>
-				<button
-					onclick={() => year++}
-					disabled={year >= thisYear}
-					aria-label="Next year"
-					class="size-8 rounded-lg border-none bg-surface-3 cursor-pointer flex items-center justify-center disabled:opacity-35 disabled:cursor-default"
-				>
-					<i class="i-tabler-chevron-right block size-4 text-soft"></i>
-				</button>
-			</div>
-			<span class="text-[13px] text-subtle">
-				<span class="text-fg font-semibold">{calendar.trained}</span> training day{calendar.trained ===
-				1
-					? ""
-					: "s"}
-				{#if calendar.trained}
-					· <span class="text-fg font-semibold">{calendar.average.toFixed(1)}</span> exercises per day
-				{/if}
-			</span>
-		</div>
-
-		<div
-			role="img"
-			aria-label="{calendar.trained} training days in {year}"
-			class="flex flex-col gap-3"
+	<!-- Sessions are part of Home: back to it, on desktop inline (phones have it in the top bar). -->
+	<div class="hidden lg:flex items-center gap-3">
+		<a href="/" class="flex items-center gap-1 text-sm text-subtle no-underline"
+			><i class="i-tabler-chevron-left block size-[18px] text-subtle"></i>Home</a
 		>
-			{#each blocks as weeks}
-				<div class="flex gap-2" aria-hidden="true">
-					<div
-						class="grid grid-rows-[auto_repeat(7,minmax(0,1fr))] gap-[3px] text-[10px] text-faint font-mono shrink-0"
-					>
-						<span class="h-3.5"></span>
-						{#each ["M", "", "W", "", "F", "", "S"] as d}
-							<span class="flex items-center">{d}</span>
-						{/each}
-					</div>
-					<div
-						class="flex-1 min-w-0 grid gap-[3px]"
-						style="grid-template-columns: repeat({columns}, minmax(0, 1fr))"
-					>
-						{#each weeks as week}
-							<span class="h-3.5 text-[10px] leading-none text-faint whitespace-nowrap"
-								>{week.month ?? ""}</span
-							>
-						{/each}
-						{#each { length: 7 } as _, row}
-							{#each weeks as week}
-								{@const day = week.days[row]}
-								<span
-									title={day.inYear && !day.future ? day.label : undefined}
-									style="grid-row: {row + 2}"
-									class="aspect-square rounded-[2px] {!day.inYear
-										? 'bg-transparent'
-										: day.future
-											? 'bg-surface-3 opacity-40'
-											: levelClass[day.level]} {day.today ? 'outline outline-1 outline-fg' : ''}"
-								></span>
-							{/each}
-						{/each}
-					</div>
-				</div>
-			{/each}
-		</div>
-
-		<div class="flex items-center justify-end gap-1.5 text-[11px] text-faint" aria-hidden="true">
-			<span class="mr-0.5">Exercises per day</span>
-			{#each levelLegend as text, i}
-				<span class="flex items-center gap-1">
-					<span class="size-[11px] rounded-[2px] {levelClass[i + 1]}"></span>{text}
-				</span>
-			{/each}
-		</div>
-	</section>
+		<h1 class="m-0 font-display font-semibold text-[22px]">Sessions</h1>
+	</div>
 
 	<section aria-label="Session history" class="flex-1 min-w-0 flex flex-col gap-5">
 		{#if loaded && sessions.length === 0}
@@ -309,7 +76,7 @@
 					Every day you log sets shows up here as a session.
 				</p>
 				<a
-					href="/"
+					href="/exercises"
 					class="h-12 px-4.5 rounded-xl bg-signal no-underline flex items-center gap-2 text-[15px] font-semibold text-on-signal"
 					>Go to exercises</a
 				>
@@ -324,18 +91,31 @@
 					{month.label}
 				</h2>
 				{#each month.sessions as session (session.key)}
+					{@const counted = routinesOn(session.key)}
 					<article
+						id={session.key}
 						class="rounded-2xl bg-surface border-solid border-1 border-hairline overflow-hidden"
+						style="scroll-margin-top: calc(var(--nav-h, 4rem) + 1rem)"
 					>
 						<header class="flex items-center gap-3 px-4 pt-3.5 pb-3">
 							<div class="flex items-baseline gap-2.5 min-w-0 flex-1">
 								<span class="font-display font-semibold text-[22px] leading-none"
 									>{dateLabel(session.date)}</span
 								>
-								<span class="text-sm text-subtle truncate">
-									{weekday(session.date)}{relative(session.date)
-										? ` · ${relative(session.date)}`
-										: ""}
+								<span class="min-w-0 flex flex-col gap-0.5">
+									<span class="text-sm text-subtle truncate">
+										{weekday(session.date)}{relative(session.date)
+											? ` · ${relative(session.date)}`
+											: ""}
+									</span>
+									{#if counted.length}
+										<span class="flex items-center gap-1.5 text-[13px] min-w-0">
+											{#each counted as routine (routine.id)}
+												<RoutineChip badge={badges.get(routine.id!)} />
+												<span class="truncate">{routine.name}</span>
+											{/each}
+										</span>
+									{/if}
 								</span>
 							</div>
 							<div class="flex flex-col items-end shrink-0">
@@ -353,7 +133,7 @@
 									class="flex flex-wrap sm:flex-nowrap items-baseline gap-x-3 gap-y-0.5 px-4 py-2.5 border-b-solid border-b-1 border-b-lift last:border-b-0"
 								>
 									<a
-										href="/?exercise={entry.id}"
+										href="/exercises?exercise={entry.id}"
 										data-plain
 										class="sm:w-[38%] shrink-0 min-w-0 truncate no-underline text-[15px] font-semibold hover:text-signal-ink"
 										>{entry.title}</a
@@ -376,4 +156,11 @@
 	</section>
 </main>
 
-<Nav />
+<Nav>
+	<div class="lg:hidden h-12 -mt-1 flex items-center">
+		<a href="/" class="flex items-center gap-0.5 pr-2 text-sm text-soft no-underline"
+			><i class="i-tabler-chevron-left block size-6 text-soft"></i>Home</a
+		>
+		<h1 class="m-0 flex-1 text-center font-display font-semibold text-[17px] pr-16">Sessions</h1>
+	</div>
+</Nav>

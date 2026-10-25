@@ -1,17 +1,20 @@
 <script lang="ts" module>
-	/** The app's sections, in nav order; Exercises (/) leads the phone tab bar. */
-	export const links = [
-		{ href: "/sessions", label: "Sessions", icon: "i-tabler-history" },
+	/** The app's sections, in nav order, for the phone tab bar and the desktop nav. */
+	export const tabs = [
+		{ href: "/", label: "Home", icon: "i-tabler-home" },
+		{ href: "/exercises", label: "Exercises", icon: "i-tabler-barbell" },
 		{ href: "/routines", label: "Routines", icon: "i-tabler-list" },
 		{ href: "/analytics", label: "Analytics", icon: "i-tabler-chart-bar" },
 		{ href: "/settings", label: "Settings", icon: "i-tabler-adjustments-horizontal" },
 	];
-	export const tabs = [{ href: "/", label: "Exercises", icon: "i-tabler-barbell" }, ...links];
 
-	/** Whether a nav entry is the current section. The admin page is reached from Settings. */
+	/**
+	 * Whether a nav entry is the current section. Sessions are reached from Home, the admin page
+	 * from Settings.
+	 */
 	export const isActive = (pathname: string, href: string) =>
 		href === "/"
-			? pathname === "/"
+			? pathname === "/" || pathname.startsWith("/sessions")
 			: pathname.startsWith(href) || (href === "/settings" && pathname.startsWith("/admin"));
 </script>
 

@@ -240,7 +240,7 @@
 
 					<div class="flex gap-2">
 						<a
-							href="/?routine={card.routine.id}"
+							href="/exercises?routine={card.routine.id}"
 							class="flex-1 h-11 rounded-xl bg-signal no-underline flex items-center justify-center gap-2 text-[15px] font-semibold text-on-signal"
 						>
 							<i class="i-tabler-player-play block size-4 text-on-signal"></i>Train

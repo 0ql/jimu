@@ -14,7 +14,7 @@ const ASSETS: string[] = [...immutable, ...assets].map(
 );
 
 // The tabs, fetched ahead of time so each of them opens offline even if it wasn't visited.
-const ROUTES = ["/", "/sessions", "/routines", "/analytics", "/settings"];
+const ROUTES = ["/", "/exercises", "/sessions", "/routines", "/analytics", "/settings"];
 const dataPath = (route: string) => `${route === "/" ? "" : route}/__data.json`;
 
 /** Pages are stored without their query (?routine=…, ?x-sveltekit-invalidated=…). */
