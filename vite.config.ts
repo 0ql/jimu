@@ -7,6 +7,9 @@ export default defineConfig({
 	plugins: [
 		sveltekit({
 			adapter: adapter(),
+			// The cross-site form check lives in src/hooks.server.ts instead, so the OAuth token
+			// endpoint can be exempted; this switches off SvelteKit's built-in one.
+			csrf: { trustedOrigins: ["*"] },
 			// Passed through to vite-plugin-svelte: runes mode for our own components only.
 			dynamicCompileOptions: ({ filename }) =>
 				filename.includes("node_modules") ? undefined : { runes: true },

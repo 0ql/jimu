@@ -41,8 +41,10 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@modelcontextprotocol/server": "^2.4.0",
 		"@node-rs/argon2": "^2.2.2",
-		"better-sqlite3": "^13.0.3"
+		"better-sqlite3": "^13.0.3",
+		"zod": "^4.6.7"
 	},
 	"imports": {
 		"#lib/*": "./src/lib/*"

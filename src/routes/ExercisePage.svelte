@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, tick } from "svelte";
+	import { onDestroy, tick, type Snippet } from "svelte";
 	import { type Exercise } from "./idb";
 	import { formatKg, formatWeight, lineStats } from "#lib/sets.js";
 	import { historyDate, LogEditor } from "./logEditor.svelte";
@@ -16,6 +16,7 @@
 		routine = null,
 		onback,
 		onnavigate,
+		notice = undefined,
 	}: {
 		exercise: Exercise;
 		backLabel: string;
@@ -28,6 +29,8 @@
 		} | null;
 		onback: () => void;
 		onnavigate: (id: number) => void;
+		/** Shown under the log, e.g. that today won't count for a split. */
+		notice?: Snippet;
 	} = $props();
 
 	const editor = new LogEditor(() => exercise);
@@ -150,6 +153,8 @@
 				class="-mx-4 w-[calc(100%+2rem)] min-h-[4lh] max-h-[8lh] overflow-y-auto resize-none border-solid border-x-0 border-t-0 border-b-[1.5px] bg-surface px-4 py-2.5 font-mono text-[15px] leading-[1.65] outline-none placeholder:text-placeholder {showPad
 					? 'border-signal-ink'
 					: 'border-edge focus:border-signal-ink'}"></textarea>
+
+			{@render notice?.()}
 
 			{#if !editor.touch || editor.textKeyboard}
 				<div class="flex gap-1.5">

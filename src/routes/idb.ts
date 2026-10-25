@@ -1,9 +1,13 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { isNetworkError, online } from "#lib/network.js";
-import { writable, type Writable } from "svelte/store";
+import { get, writable, type Writable } from "svelte/store";
 import { page } from "$app/state";
-import { mergeExercises, mergeRoutines, newId } from "#lib/merge.js";
+import { mergeExercises, mergeRoutines, mergeSplits, newId } from "#lib/merge.js";
+import { isoDate, type Split } from "#lib/splits.js";
+import { isTodayLine, parseLog } from "#lib/sets.js";
 import { toast } from "#lib/toast.svelte.js";
+
+export type { Split };
 
 export type Exercise = {
 	id?: number;
@@ -17,10 +21,15 @@ export type Routine = {
 	id?: number;
 	name: string;
 	exerciseIds: number[];
+	/**
+	 * Days ("YYYY-MM-DD") this routine was trained: logged while its filter was on. Splits use
+	 * them to tell what is due next (see #lib/splits).
+	 */
+	trainedOn?: string[];
 };
 
 /**
- * Sync bookkeeping per store (id 1 = exercises, id 2 = routines).
+ * Sync bookkeeping per store (id 1 = exercises, id 2 = routines, id 4 = splits).
  * `lastChanged` is the server's version (its lastModified) this device last synced with; it is
  * sent with every upload so the server can refuse one based on an older version. `dirty` means
  * there are local edits the server has not received yet. `base` is the copy of the data as it
@@ -32,7 +41,7 @@ export type SyncMeta = {
 	id?: number;
 	lastChanged: number;
 	dirty?: boolean;
-	base?: Exercise[] | Routine[];
+	base?: Exercise[] | Routine[] | Split[];
 	/** Only on the OWNER_META record: the account this browser's local data belongs to. */
 	owner?: string;
 };
@@ -50,11 +59,16 @@ export interface DB extends DBSchema {
 		key: number;
 		value: Routine;
 	};
+	splits: {
+		key: number;
+		value: Split;
+	};
 }
 
 export const EXERCISES_META = 1;
 export const ROUTINES_META = 2;
 export const OWNER_META = 3;
+export const SPLITS_META = 4;
 
 export let idb: IDBPDatabase<DB>;
 export const synced = writable(true);
@@ -68,7 +82,7 @@ const markDirty = async (id: number) => {
 	await idb.put("meta", { lastChanged: 0, ...meta, id, dirty: true });
 };
 
-type Kind = "exercises" | "routines";
+type Kind = "exercises" | "routines" | "splits";
 const KINDS = {
 	exercises: {
 		meta: EXERCISES_META,
@@ -86,18 +100,29 @@ const KINDS = {
 		}),
 		reload: () => loadRoutines(),
 	},
+	splits: {
+		meta: SPLITS_META,
+		url: "/splits",
+		merge: (base: Split[], local: Split[], server: Split[]) => ({
+			merged: mergeSplits(base, local, server),
+			conflicts: [] as string[],
+		}),
+		reload: () => loadSplits(),
+	},
 } as const;
 
 // Counts local edits, so an edit made while a sync is in flight is never marked as synced.
-const edits: Record<Kind, number> = { exercises: 0, routines: 0 };
+const edits: Record<Kind, number> = { exercises: 0, routines: 0, splits: 0 };
 const timers: Record<Kind, ReturnType<typeof setTimeout> | null> = {
 	exercises: null,
 	routines: null,
+	splits: null,
 };
 // One sync per store at a time (the timer, a reconnect and "Sync now" can all ask at once).
 const queues: Record<Kind, Promise<unknown>> = {
 	exercises: Promise.resolve(),
 	routines: Promise.resolve(),
+	splits: Promise.resolve(),
 };
 const serialized = (kind: Kind, job: () => Promise<unknown>) =>
 	(queues[kind] = queues[kind].then(job, job));
@@ -112,7 +137,7 @@ export const registerEditor = (flush: () => unknown) => {
 
 /**
  * POSTs to the server; null when it can't be reached. Offline is not an error here: the data
- * stays dirty on this device and syncPending() uploads it once the connection is back.
+ * stays dirty on this device and checkForUpdates() syncs it once the connection is back.
  */
 const send = async (url: string, body: unknown) => {
 	try {
@@ -148,7 +173,7 @@ const download = async (url: string) => {
 };
 
 /** Replaces a store's contents in one transaction. */
-const replaceAll = async (kind: Kind, items: (Exercise | Routine)[]) => {
+const replaceAll = async (kind: Kind, items: (Exercise | Routine | Split)[]) => {
 	// idb's typings can't follow a union of store names; both stores hold plain objects.
 	const tx = idb.transaction(kind as "exercises", "readwrite");
 	await tx.store.clear();
@@ -248,17 +273,20 @@ const schedule = (kind: Kind) => {
 };
 const scheduleSync = () => schedule("exercises");
 const scheduleRoutineSync = () => schedule("routines");
+const scheduleSplitSync = () => schedule("splits");
 
 export const syncToServer = () => serialized("exercises", () => upload("exercises"));
 export const syncRoutinesToServer = () => serialized("routines", () => upload("routines"));
+const syncSplitsToServer = () => serialized("splits", () => upload("splits"));
 
 /**
- * The startup sync, given the server's version from the page data. Unsynced edits (or no
- * record yet) are uploaded, which merges in anything newer; a clean copy is replaced by a
- * newer server copy. If the server is older than what this device synced with (restored
- * database), this device's copy is uploaded to bring it back.
+ * Brings one store in line with the server, given the server's current version. Unsynced
+ * edits (or no record yet) are uploaded, which merges in anything newer; a clean copy is
+ * replaced by a newer server copy. If the server is older than what this device synced with
+ * (restored database), this device's copy is uploaded to bring it back. Nothing happens when
+ * the versions match.
  */
-export const syncOnStart = (kind: Kind, serverVersion: number) =>
+export const syncWithServer = (kind: Kind, serverVersion: number) =>
 	serialized(kind, async () => {
 		const meta = await idb.get("meta", KINDS[kind].meta);
 		const hasLocal = (await idb.count(kind as "exercises")) > 0;
@@ -268,8 +296,39 @@ export const syncOnStart = (kind: Kind, serverVersion: number) =>
 		if (serverVersion < meta.lastChanged) return upload(kind);
 	});
 
+/**
+ * Checks the server for changes made elsewhere (another device, a connected assistant) and
+ * brings them in. Only the versions are fetched unless something changed. Unsaved typing is
+ * written first, so it gets uploaded and merged rather than replaced.
+ */
+export const checkForUpdates = async () => {
+	if (!page.data.userUuid) return;
+	await loadDB();
+	let versions: { exercises: number; routines: number; splits?: number };
+	try {
+		const res = await fetch("/sync", { cache: "no-store" });
+		online.set(true);
+		// Signed out meanwhile (redirected to the login page): nothing to check.
+		if (!res.ok || res.redirected) return;
+		versions = await res.json();
+	} catch (error) {
+		if (!isNetworkError(error)) return;
+		online.set(false);
+		return;
+	}
+	await Promise.all([...editors].map((flush) => flush()));
+	await Promise.all([
+		syncWithServer("exercises", versions.exercises),
+		syncWithServer("routines", versions.routines),
+		syncWithServer("splits", versions.splits ?? 0),
+	]);
+};
+
 export const exercises: Writable<Exercise[]> = writable([]);
 export const routines: Writable<Routine[]> = writable([]);
+export const splits: Writable<Split[]> = writable([]);
+/** The routine filter on the exercises tab; logging with it on counts the day for that routine. */
+export const trainingRoutineId = writable<number | null>(null);
 
 const updateMeta = async () => {
 	edits.exercises++;
@@ -279,6 +338,11 @@ const updateMeta = async () => {
 const updateRoutineMeta = async () => {
 	edits.routines++;
 	await markDirty(ROUTINES_META);
+};
+
+const updateSplitMeta = async () => {
+	edits.splits++;
+	await markDirty(SPLITS_META);
 };
 
 /** For bulk writes made outside this module (e.g. the settings import). */
@@ -295,7 +359,7 @@ let claiming: Promise<void> = Promise.resolve();
 
 export const loadDB = async () => {
 	if (!idb)
-		idb = await openDB<DB>("main", 3, {
+		idb = await openDB<DB>("main", 4, {
 			async upgrade(db, oldVersion) {
 				if (!db.objectStoreNames.contains("exercises")) {
 					db.createObjectStore("exercises", { keyPath: "id", autoIncrement: true });
@@ -305,6 +369,9 @@ export const loadDB = async () => {
 				}
 				if (!db.objectStoreNames.contains("routines")) {
 					db.createObjectStore("routines", { keyPath: "id", autoIncrement: true });
+				}
+				if (!db.objectStoreNames.contains("splits")) {
+					db.createObjectStore("splits", { keyPath: "id" });
 				}
 			},
 		});
@@ -326,6 +393,11 @@ export const loadExercises = async () => {
 export const loadRoutines = async () => {
 	const db = await loadDB();
 	routines.set(await db.getAll("routines"));
+};
+
+export const loadSplits = async () => {
+	const db = await loadDB();
+	splits.set(await db.getAll("splits"));
 };
 
 export const addExercise = async (title: string, workoutsString = "", note = "") => {
@@ -375,7 +447,11 @@ export const addRoutine = async (name: string, exerciseIds: number[]) => {
 };
 
 export const saveRoutine = async (routine: Routine) => {
-	await idb.put("routines", { ...routine, exerciseIds: Array.from(routine.exerciseIds) });
+	await idb.put("routines", {
+		...routine,
+		exerciseIds: Array.from(routine.exerciseIds),
+		...(routine.trainedOn ? { trainedOn: Array.from(routine.trainedOn) } : {}),
+	});
 	await updateRoutineMeta();
 	await loadRoutines();
 	scheduleRoutineSync();
@@ -387,6 +463,88 @@ export const deleteRoutine = async (routine: Routine) => {
 	await updateRoutineMeta();
 	await loadRoutines();
 	scheduleRoutineSync();
+	await removeRoutineFromAllSplits(routine.id);
+};
+
+/** Adds or removes a day from a routine's training days. */
+const setTrained = async (routineId: number, date: string, on: boolean) => {
+	const routine = await idb.get("routines", routineId);
+	if (!routine) return;
+	const days = new Set(routine.trainedOn ?? []);
+	if (days.has(date) === on) return;
+	if (on) days.add(date);
+	else days.delete(date);
+	await saveRoutine({ ...routine, trainedOn: [...days].sort() });
+};
+
+export const markTrained = (routineId: number, date = isoDate()) =>
+	setTrained(routineId, date, true);
+export const unmarkTrained = (routineId: number, date = isoDate()) =>
+	setTrained(routineId, date, false);
+
+/**
+ * After a log was saved: with a routine filter on that holds this exercise, a set logged today
+ * counts today for that routine.
+ */
+export const recordTraining = async (exerciseId: number | undefined, log: string) => {
+	const routineId = get(trainingRoutineId);
+	if (routineId === null || exerciseId === undefined) return;
+	const routine = get(routines).find((r) => r.id === routineId);
+	if (!routine?.exerciseIds.includes(exerciseId)) return;
+	const { current } = parseLog(log);
+	if (!isTodayLine(current) || !current.sets.some((s) => s.kind !== "invalid")) return;
+	if (routine.trainedOn?.includes(isoDate())) return;
+	await markTrained(routineId);
+};
+
+/** A plain copy for IndexedDB, which can't store Svelte's state proxies. */
+const plainSplit = (split: Split): Split => ({
+	...split,
+	routineIds: Array.from(split.routineIds),
+	days: Array.from(split.days),
+	gymDays: Array.from(split.gymDays ?? []),
+});
+
+export const addSplit = async (split: Split) => {
+	const id = newId();
+	await idb.add("splits", { ...plainSplit(split), id });
+	await updateSplitMeta();
+	await loadSplits();
+	scheduleSplitSync();
+	return id;
+};
+
+export const saveSplit = async (split: Split) => {
+	await idb.put("splits", plainSplit(split));
+	await updateSplitMeta();
+	await loadSplits();
+	scheduleSplitSync();
+};
+
+export const deleteSplit = async (split: Split) => {
+	if (!split.id) return;
+	await idb.delete("splits", split.id);
+	await updateSplitMeta();
+	await loadSplits();
+	scheduleSplitSync();
+};
+
+/** A deleted routine leaves every split: out of the rotation, its weekdays become rest days. */
+const removeRoutineFromAllSplits = async (routineId: number) => {
+	let changed = false;
+	for (const split of await idb.getAll("splits")) {
+		if (!split.routineIds.includes(routineId) && !split.days.includes(routineId)) continue;
+		await idb.put("splits", {
+			...split,
+			routineIds: split.routineIds.filter((id) => id !== routineId),
+			days: split.days.map((id) => (id === routineId ? null : id)),
+		});
+		changed = true;
+	}
+	if (!changed) return;
+	await updateSplitMeta();
+	await loadSplits();
+	scheduleSplitSync();
 };
 
 const removeExerciseFromAllRoutines = async (exerciseId: number) => {
@@ -414,19 +572,21 @@ export const getAll = async <S extends "meta" | "exercises">(storeName: S) => {
 
 /** Clears the local stores. Takes the open database so it never waits on loadDB(). */
 const clearStores = async (db: IDBPDatabase<DB>) => {
-	for (const kind of ["exercises", "routines"] as const) {
+	for (const kind of ["exercises", "routines", "splits"] as const) {
 		if (timers[kind]) clearTimeout(timers[kind]);
 		timers[kind] = null;
 	}
 	await db.clear("exercises");
 	await db.clear("routines");
+	await db.clear("splits");
 	await db.clear("meta");
 	exercises.set([]);
 	routines.set([]);
+	splits.set([]);
 	synced.set(true);
 };
 
-/** Wipes this browser's copy of the data (exercises, routines, sync bookkeeping). */
+/** Wipes this browser's copy of the data (exercises, routines, splits, sync bookkeeping). */
 export const resetLocalData = async () => {
 	await clearStores(await loadDB());
 	// Check ownership again on the next load, whoever signs in.
@@ -450,6 +610,7 @@ export const syncPending = async () => {
 	if (!idb) return;
 	if ((await idb.get("meta", EXERCISES_META))?.dirty) await syncToServer();
 	if ((await idb.get("meta", ROUTINES_META))?.dirty) await syncRoutinesToServer();
+	if ((await idb.get("meta", SPLITS_META))?.dirty) await syncSplitsToServer();
 };
 
 /**
@@ -460,8 +621,9 @@ export const syncPending = async () => {
 export const syncAndClearLocalData = async () => {
 	const db = await loadDB();
 	await syncPending();
-	if ((await db.get("meta", EXERCISES_META))?.dirty || (await db.get("meta", ROUTINES_META))?.dirty)
-		return false;
+	for (const id of [EXERCISES_META, ROUTINES_META, SPLITS_META]) {
+		if ((await db.get("meta", id))?.dirty) return false;
+	}
 	await resetLocalData();
 	return true;
 };

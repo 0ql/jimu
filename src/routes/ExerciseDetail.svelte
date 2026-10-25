@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick } from "svelte";
+	import { tick, type Snippet } from "svelte";
 	import { type Exercise, routines } from "./idb";
 	import { formatKg, formatWeight, lineStats } from "#lib/sets.js";
 	import { historyDate, LogEditor } from "./logEditor.svelte";
@@ -8,7 +8,16 @@
 	import SetKeypad from "#lib/ui/SetKeypad.svelte";
 	import EditExerciseSheet from "./EditExerciseSheet.svelte";
 
-	let { exercise, onescape }: { exercise: Exercise; onescape?: () => void } = $props();
+	let {
+		exercise,
+		onescape,
+		notice = undefined,
+	}: {
+		exercise: Exercise;
+		onescape?: () => void;
+		/** Shown under the log, e.g. that today won't count for a split. */
+		notice?: Snippet;
+	} = $props();
 
 	const editor = new LogEditor(() => exercise);
 	let showPopup = $state(false);
@@ -118,6 +127,7 @@
 				placeholder="{editor.stamp} a10x12 30x10 x8 x7 d15x7"
 				class="w-full min-h-[6lh] max-h-[16lh] overflow-y-auto resize-y rounded-[10px] border-solid border-[1.5px] border-signal-ink bg-bg px-3.5 py-3 font-mono text-base leading-[1.7] outline-none placeholder:text-placeholder"
 			></textarea>
+			{@render notice?.()}
 			<div class="flex flex-wrap items-center gap-2">
 				<button
 					onclick={editor.addToday}

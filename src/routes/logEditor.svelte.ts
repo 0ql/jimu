@@ -1,6 +1,6 @@
 import { tick } from "svelte";
 import { get } from "svelte/store";
-import { exercises, registerEditor, saveExercise, type Exercise } from "./idb";
+import { exercises, recordTraining, registerEditor, saveExercise, type Exercise } from "./idb";
 import { mergeExercises } from "#lib/merge.js";
 import { datedLines, dateStamp, isTodayLine, lineStats, parseLine, parseLog } from "#lib/sets.js";
 import type { KeypadKey } from "#lib/ui/SetKeypad.svelte";
@@ -111,6 +111,7 @@ export class LogEditor {
 		}
 		this.#saved = next;
 		await saveExercise({ ...exercise, ...next });
+		await recordTraining(exercise.id, next.workoutsString);
 	};
 
 	/** Saves now if a save is still waiting, e.g. before the editor goes away. */

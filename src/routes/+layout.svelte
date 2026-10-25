@@ -8,7 +8,7 @@
 	import OfflineBanner from "./OfflineBanner.svelte";
 	import { onMount } from "svelte";
 	import { online, warmOfflineCache } from "#lib/network.js";
-	import { syncPending } from "./idb";
+	import { checkForUpdates } from "./idb";
 	import { toast } from "#lib/toast.svelte.js";
 
 	let { children } = $props();
@@ -31,8 +31,8 @@
 	);
 
 	// Offline handling. The browser's events say when the network goes; a light request to the
-	// server confirms it is back (and catches "online" but unreachable). Coming back uploads what
-	// changed meanwhile and refreshes the stored pages.
+	// server confirms it is back (and catches "online" but unreachable). Coming back syncs both
+	// ways and refreshes the stored pages.
 	const PROBE_MS = 15_000;
 	const probe = async () => {
 		try {
@@ -41,6 +41,19 @@
 		} catch {
 			online.set(false);
 		}
+	};
+
+	// Changes made elsewhere (another device, a connected assistant) come in when the app is shown
+	// again (switching back to it, unlocking the phone) and every few minutes while it stays open.
+	// Each check only asks for the server's versions unless something changed.
+	const CHECK_EVERY_MS = 2 * 60_000;
+	const MIN_GAP_MS = 15_000;
+	let lastCheck = 0;
+	const check = (force = false) => {
+		if (!$online || document.visibilityState !== "visible") return;
+		if (!force && Date.now() - lastCheck < MIN_GAP_MS) return;
+		lastCheck = Date.now();
+		checkForUpdates();
 	};
 
 	// Signed in and online: (re)fill the stored pages. Runs once the startup check is done, right
@@ -63,14 +76,21 @@
 		// A page served from the worker's copy may still think it is online, and the worker's
 		// message can arrive before this listener: ask the server once at startup.
 		let wasOnline = $online;
-		probe().then(() => (startupChecked = true));
+		probe().then(() => {
+			startupChecked = true;
+			check(true);
+		});
+		const onShown = () => check();
+		document.addEventListener("visibilitychange", onShown);
+		addEventListener("focus", onShown);
+		const every = setInterval(() => check(true), CHECK_EVERY_MS);
 		let timer: ReturnType<typeof setInterval> | undefined;
 		const unsubscribe = online.subscribe((isOnline) => {
 			clearInterval(timer);
 			if (!isOnline) timer = setInterval(probe, PROBE_MS);
 			else if (!wasOnline) {
 				toast.success("Back online. Syncing your changes…");
-				syncPending();
+				check(true);
 			}
 			wasOnline = isOnline;
 		});
@@ -78,6 +98,9 @@
 			removeEventListener("offline", goOffline);
 			removeEventListener("online", probe);
 			navigator.serviceWorker?.removeEventListener("message", onWorkerMessage);
+			document.removeEventListener("visibilitychange", onShown);
+			removeEventListener("focus", onShown);
+			clearInterval(every);
 			clearInterval(timer);
 			unsubscribe();
 		};
@@ -117,7 +140,7 @@
 	{@render children()}
 </div>
 <OfflineBanner />
-{#if page.data.userUuid}
+{#if page.data.userUuid && !page.url.pathname.startsWith("/oauth/")}
 	<TabBar />
 {/if}
 <Toasts />

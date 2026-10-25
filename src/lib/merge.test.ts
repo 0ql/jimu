@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mergeExercises, mergeIds, mergeLog, mergeRoutines, newId } from "./merge";
+import { mergeExercises, mergeIds, mergeLog, mergeRoutines, mergeSplits, newId } from "./merge";
+import { newSplit } from "./splits";
 
 const NOW = new Date(2026, 9, 24); // 24.10.2026
 const log = (...lines: string[]) => lines.join("\n");
@@ -193,6 +194,59 @@ describe("mergeRoutines", () => {
 		expect(mergeRoutines([push, legs], [push], [push, { ...legs, name: "Leg day" }])).toEqual([
 			push,
 			{ ...legs, name: "Leg day" },
+		]);
+	});
+
+	it("keeps training days tagged on either device, sorted", () => {
+		const base = { ...push, trainedOn: ["2026-10-20"] };
+		const phone = { ...push, trainedOn: ["2026-10-20", "2026-10-24"] };
+		const laptop = { ...push, trainedOn: ["2026-10-20", "2026-10-22"] };
+		expect(mergeRoutines([base], [phone], [laptop])).toEqual([
+			{ ...push, trainedOn: ["2026-10-20", "2026-10-22", "2026-10-24"] },
+		]);
+	});
+
+	it("counts a new training day as a change, so a deletion elsewhere doesn't drop it", () => {
+		const tagged = { ...push, trainedOn: ["2026-10-24"] };
+		expect(mergeRoutines([push], [tagged], [])).toEqual([tagged]);
+	});
+});
+
+describe("mergeSplits", () => {
+	const ppl = {
+		...newSplit("2026-10-01"),
+		id: 1,
+		name: "PPL",
+		routineIds: [1, 2, 3],
+	};
+
+	it("takes each side's change to different fields", () => {
+		const renamed = { ...ppl, name: "Push Pull Legs" };
+		const slower = { ...ppl, everyDays: 3, routineIds: [1, 2, 3, 4] };
+		expect(mergeSplits([ppl], [renamed], [slower])).toEqual([
+			{ ...ppl, name: "Push Pull Legs", everyDays: 3, routineIds: [1, 2, 3, 4] },
+		]);
+	});
+
+	it("keeps gym days added or removed on either side", () => {
+		const gym = { ...ppl, pace: "gym-days" as const, gymDays: [1, 2, 3] };
+		const plusSunday = { ...gym, gymDays: [1, 2, 3, 6] };
+		const noTuesday = { ...gym, gymDays: [2, 3] };
+		expect(mergeSplits([gym], [plusSunday], [noTuesday])[0].gymDays).toEqual([2, 3, 6]);
+	});
+
+	it("merges weekdays one day at a time", () => {
+		const week = { ...ppl, kind: "weekdays" as const, days: [1, null, 2, null, 3, null, null] };
+		const monday = { ...week, days: [4, null, 2, null, 3, null, null] };
+		const saturday = { ...week, days: [1, null, 2, null, 3, 5, null] };
+		expect(mergeSplits([week], [monday], [saturday])[0].days).toEqual([
+			4,
+			null,
+			2,
+			null,
+			3,
+			5,
+			null,
 		]);
 	});
 });

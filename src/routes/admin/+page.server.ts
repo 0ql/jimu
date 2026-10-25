@@ -1,7 +1,7 @@
 import { statSync } from "node:fs";
 import { error } from "@sveltejs/kit";
 import { db } from "#lib/server/db/index.js";
-import { exercises, routines, sessions, users } from "#lib/server/db/schema.js";
+import { exercises, loginSessions, routines, users } from "#lib/server/db/schema.js";
 import { datedLines, lineStats, parseLine } from "#lib/sets.js";
 import type { PageServerLoad } from "./$types";
 
@@ -69,7 +69,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			})
 			.from(exercises),
 		db.select({ uuid: routines.uuid, json: routines.routinesJsn }).from(routines),
-		db.select({ uuid: sessions.userUuid, expiresAt: sessions.expiresAt }).from(sessions),
+		db
+			.select({ uuid: loginSessions.userUuid, expiresAt: loginSessions.expiresAt })
+			.from(loginSessions),
 	]);
 
 	const byUser = new Map(exerciseRows.map((r) => [r.uuid, r]));

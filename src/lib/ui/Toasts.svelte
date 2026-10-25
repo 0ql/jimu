@@ -28,6 +28,17 @@
 		>
 			<i class="block size-5 shrink-0 {styles[t.type].icon}"></i>
 			<span class="text-sm flex-1">{t.message}</span>
+			{#if t.action}
+				<button
+					onclick={() => {
+						t.action!.run();
+						toast.remove(t.id);
+					}}
+					class="h-8 px-2.5 -my-1 rounded-lg border-none bg-transparent cursor-pointer text-sm font-semibold text-signal-ink"
+				>
+					{t.action.label}
+				</button>
+			{/if}
 			<button
 				onclick={() => toast.remove(t.id)}
 				aria-label="Dismiss"

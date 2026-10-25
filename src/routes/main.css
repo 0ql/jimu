@@ -102,6 +102,13 @@
 	--drop: #ffb088;
 	--drop-bg: rgba(255, 138, 76, 0.12);
 	--drop-border: rgba(255, 138, 76, 0.45);
+	/* Routine chips in splits, one colour per routine (see #lib/ui/RoutineChip). */
+	--routine-1: #d7f55a;
+	--routine-2: #7cc4ff;
+	--routine-3: #ffb088;
+	--routine-4: #c4a0ff;
+	--routine-5: #ff9cc2;
+	--routine-6: #6fe0c8;
 	color-scheme: dark;
 }
 
@@ -182,6 +189,12 @@
 	--drop: #b8541c;
 	--drop-bg: rgba(255, 138, 76, 0.14);
 	--drop-border: rgba(214, 102, 44, 0.5);
+	--routine-1: #5b7a00;
+	--routine-2: #1d6fb0;
+	--routine-3: #b8541c;
+	--routine-4: #6d45c4;
+	--routine-5: #b8306a;
+	--routine-6: #0f7d68;
 	color-scheme: light;
 }
 

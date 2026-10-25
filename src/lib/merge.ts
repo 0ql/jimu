@@ -12,9 +12,15 @@
  *   so the result simply holds everything from both sides.
  */
 import { datedLines, parseLine } from "./sets";
+import type { Split } from "./splits";
 
 export type MergeExercise = { id?: number; title: string; workoutsString: string; note?: string };
-export type MergeRoutine = { id?: number; name: string; exerciseIds: number[] };
+export type MergeRoutine = {
+	id?: number;
+	name: string;
+	exerciseIds: number[];
+	trainedOn?: string[];
+};
 
 /** A field changed on both sides keeps this device's value. */
 const pick = <T>(base: T | undefined, local: T, server: T) => (local === base ? server : local);
@@ -106,9 +112,12 @@ export const mergeLog = (base: string, local: string, server: string, now = new 
 	return { log: picked.map((p) => p.line).join("\n"), conflict };
 };
 
-/** Merges an ordered list of ids (a routine's exercises): removals on either side apply. */
-export const mergeIds = (base: number[] | undefined, local: number[], server: number[]) => {
-	const same = (x: number[], y: number[] | undefined) =>
+/**
+ * Merges an ordered list of ids (a routine's exercises, a split's routines, the days a routine
+ * was trained): removals on either side apply.
+ */
+export const mergeIds = <T>(base: T[] | undefined, local: T[], server: T[]) => {
+	const same = (x: T[], y: T[] | undefined) =>
 		!!y && x.length === y.length && x.every((v, i) => v === y[i]);
 	if (same(local, server) || same(server, base)) return [...local];
 	if (same(local, base)) return [...server];
@@ -181,20 +190,55 @@ export const mergeExercises = <T extends MergeExercise>(
 	return { merged, conflicts };
 };
 
+const sameList = <T>(x: T[] = [], y: T[] = []) =>
+	x.length === y.length && x.every((v, i) => v === y[i]);
+
 const sameRoutine = (x: MergeRoutine, y: MergeRoutine) =>
-	x.name === y.name &&
-	x.exerciseIds.length === y.exerciseIds.length &&
-	x.exerciseIds.every((v, i) => v === y.exerciseIds[i]);
+	x.name === y.name && sameList(x.exerciseIds, y.exerciseIds) && sameList(x.trainedOn, y.trainedOn);
 
 export const mergeRoutines = <T extends MergeRoutine>(base: T[], local: T[], server: T[]) =>
-	mergeById(base, local, server, sameRoutine, (b, l, s) => ({
+	mergeById(base, local, server, sameRoutine, (b, l, s) => {
+		const merged: T = {
+			...l,
+			name: pick(b?.name, l.name, s.name),
+			exerciseIds: mergeIds(b?.exerciseIds, l.exerciseIds, s.exerciseIds),
+		};
+		const trainedOn = mergeIds(b?.trainedOn, l.trainedOn ?? [], s.trainedOn ?? []).sort();
+		if (trainedOn.length) merged.trainedOn = trainedOn;
+		else delete merged.trainedOn;
+		return merged;
+	});
+
+const sameSplit = (x: Split, y: Split) =>
+	x.name === y.name &&
+	x.kind === y.kind &&
+	sameList(x.routineIds, y.routineIds) &&
+	x.pace === y.pace &&
+	x.everyDays === y.everyDays &&
+	sameList(x.gymDays, y.gymDays) &&
+	x.keepOrder === y.keepOrder &&
+	sameList(x.days, y.days) &&
+	x.catchUp === y.catchUp &&
+	x.start === y.start;
+
+/** Splits merge field by field; each weekday on its own, so two devices can plan different days. */
+export const mergeSplits = (base: Split[], local: Split[], server: Split[]) =>
+	mergeById(base, local, server, sameSplit, (b, l, s) => ({
 		...l,
 		name: pick(b?.name, l.name, s.name),
-		exerciseIds: mergeIds(b?.exerciseIds, l.exerciseIds, s.exerciseIds),
+		kind: pick(b?.kind, l.kind, s.kind),
+		routineIds: mergeIds(b?.routineIds, l.routineIds, s.routineIds),
+		pace: pick(b?.pace, l.pace, s.pace),
+		everyDays: pick(b?.everyDays, l.everyDays, s.everyDays),
+		gymDays: mergeIds(b?.gymDays, l.gymDays ?? [], s.gymDays ?? []).sort((x, y) => x - y),
+		keepOrder: pick(b?.keepOrder, l.keepOrder, s.keepOrder),
+		days: l.days.map((day, i) => pick(b?.days[i], day, s.days[i] ?? null)),
+		catchUp: pick(b?.catchUp, l.catchUp, s.catchUp),
+		start: pick(b?.start, l.start, s.start),
 	}));
 
 /**
- * An id for a new exercise or routine that won't clash with one made on another device
+ * An id for a new exercise, routine or split that won't clash with one made on another device
  * meanwhile: milliseconds since 1970 times 1000 plus a random part. Still a plain number, so
  * links, routines and existing ids keep working.
  */

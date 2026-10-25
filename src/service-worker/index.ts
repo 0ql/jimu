@@ -99,7 +99,8 @@ sw.addEventListener("fetch", (event) => {
 	if (event.request.method !== "GET") return;
 
 	const url = new URL(event.request.url);
-	if (url.origin !== sw.location.origin) return;
+	// The OAuth consent page and the connector's endpoints are never stored.
+	if (url.origin !== sw.location.origin || url.pathname.startsWith("/oauth/")) return;
 
 	if (ASSETS.includes(url.pathname)) {
 		// ignoreVary: servers like `vite preview` send "Vary: Origin", and code loaded on demand

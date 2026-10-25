@@ -7,8 +7,15 @@
 	let {
 		title,
 		showPopup = $bindable(true),
+		wide = false,
 		children,
-	}: { title: string; showPopup?: boolean; children?: Snippet } = $props();
+	}: {
+		title: string;
+		showPopup?: boolean;
+		/** Room for two columns on larger screens instead of one narrow one. */
+		wide?: boolean;
+		children?: Snippet;
+	} = $props();
 
 	let isMobile = $state(true);
 
@@ -38,7 +45,7 @@
 		class="fixed z-40 bg-surface border-solid border-1 border-popup-edge box-border overflow-y-auto
 			{isMobile
 			? 'left-0 bottom-0 rounded-t-[22px] w-full max-h-[85dvh] px-5 pt-2 border-b-none'
-			: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md max-h-[85dvh] rounded-2xl px-6 py-5'}"
+			: `left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full ${wide ? 'max-w-[min(880px,calc(100vw-2rem))] px-7 py-6' : 'max-w-md px-6 py-5'} max-h-[85dvh] rounded-2xl`}"
 		style={isMobile ? "padding-bottom: calc(1.75rem + env(safe-area-inset-bottom))" : ""}
 	>
 		{#if isMobile}

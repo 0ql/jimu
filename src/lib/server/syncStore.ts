@@ -1,10 +1,10 @@
 import { error, json } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import { db } from "#lib/server/db/index.js";
-import { exercises, routines } from "#lib/server/db/schema.js";
+import { exercises, routines, splits } from "#lib/server/db/schema.js";
 
 /**
- * Saving a user's exercises or routines. An upload says which server version it was based on
+ * Saving a user's exercises, routines or splits. An upload says which server version it was based on
  * (`base`, the lastModified the device last synced with). It is stored only if that is still
  * the current version; otherwise nothing is written and the reply (409) carries the current
  * data, which the device merges with its own and uploads again. Checking and writing happen in
@@ -13,6 +13,7 @@ import { exercises, routines } from "#lib/server/db/schema.js";
 const STORES = {
 	exercises: { table: exercises, data: exercises.workoutsJsn, column: "workoutsJsn" },
 	routines: { table: routines, data: routines.routinesJsn, column: "routinesJsn" },
+	splits: { table: splits, data: splits.splitsJsn, column: "splitsJsn" },
 } as const;
 
 type Store = keyof typeof STORES;

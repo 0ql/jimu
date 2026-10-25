@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
+	import { page } from "$app/state";
 	import AuthShell from "../AuthShell.svelte";
 	import AuthField from "../AuthField.svelte";
 
@@ -30,7 +31,9 @@
 				return;
 			}
 			// invalidateAll reloads layout data (e.g. the admin flag) for the account that just logged in.
-			goto("/", { invalidateAll: true });
+			// Connecting an app (OAuth) sends people here first and expects them back afterwards.
+			const next = page.url.searchParams.get("next");
+			goto(next?.startsWith("/oauth/authorize?") ? next : "/", { invalidateAll: true });
 		} finally {
 			loading = false;
 		}

@@ -17,7 +17,7 @@
 		type DB,
 		type SyncMeta,
 	} from "../idb";
-	import { goto } from "$app/navigation";
+	import { goto, invalidateAll } from "$app/navigation";
 	import Popup from "#lib/ui/Popup.svelte";
 	import Nav from "../Nav.svelte";
 	import { toast } from "#lib/toast.svelte.js";
@@ -51,6 +51,44 @@
 			tapped: navigator.userActivation?.hasBeenActive ?? true,
 			secure: window.isSecureContext,
 		};
+	};
+
+	// Connected apps (the Claude connector). Disconnecting takes two taps, like role changes in Admin.
+	let revokePending: string | null = $state(null);
+	const revoke = async (id: string) => {
+		if (revokePending !== id) {
+			revokePending = id;
+			return;
+		}
+		const res = await fetch("/settings/connections", {
+			method: "DELETE",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ id }),
+		}).catch(() => null);
+		revokePending = null;
+		if (!res?.ok) {
+			toast.error(
+				res ? "Couldn't disconnect the app" : "You're offline. Disconnecting needs a connection.",
+			);
+			return;
+		}
+		toast.success("Disconnected. The app can no longer read your data.");
+		await invalidateAll();
+	};
+	const copyConnectorUrl = async () => {
+		try {
+			await navigator.clipboard.writeText(data.connectorUrl);
+			toast.success("Address copied");
+		} catch {
+			toast.error("Couldn't copy. Select the address instead.");
+		}
+	};
+	const connectedOn = (ms: number) =>
+		new Date(ms).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+	const usedAgo = (ms: number | null) => {
+		if (ms === null) return "not used yet";
+		const days = Math.floor((Date.now() - ms) / 86_400_000);
+		return days <= 0 ? "used today" : days === 1 ? "used yesterday" : `used ${days}d ago`;
 	};
 
 	let db: IDBPDatabase<DB>;
@@ -322,6 +360,54 @@
 						</button>
 					</div>
 				{/if}
+			</section>
+
+			<section aria-labelledby="apps-head" class={card}>
+				<h2 id="apps-head" class={cardHead}>Connected apps</h2>
+				{#each data.connections as app (app.id)}
+					{@const armed = revokePending === app.id}
+					<div class={row}>
+						<i class="i-tabler-plug-connected block size-5 text-subtle shrink-0"></i>
+						<div class="flex-1 min-w-0 flex flex-col">
+							<span class="font-semibold truncate">{app.name}</span>
+							<span class="text-xs text-subtle">
+								{app.host} · read only · since {connectedOn(app.createdAt)} · {usedAgo(
+									app.lastUsedAt,
+								)}
+							</span>
+						</div>
+						<button
+							onclick={() => revoke(app.id)}
+							class="h-10 px-3.5 rounded-[10px] border-none cursor-pointer text-sm shrink-0 {armed
+								? 'bg-destructive text-white font-semibold'
+								: 'bg-surface-3'}">{armed ? "Disconnect" : "Revoke"}</button
+						>
+						{#if armed}
+							<button
+								onclick={() => (revokePending = null)}
+								aria-label="Cancel"
+								class="size-10 -ml-2 shrink-0 rounded-[10px] border-none bg-transparent cursor-pointer flex items-center justify-center"
+							>
+								<i class="i-tabler-x block size-4 text-subtle"></i>
+							</button>
+						{/if}
+					</div>
+				{/each}
+				<div class="{row} {data.connections.length ? divider : ''} items-start">
+					<i class="i-tabler-sparkles block size-5 text-subtle shrink-0 mt-0.5"></i>
+					<div class="flex-1 min-w-0 flex flex-col gap-1.5">
+						<span class="text-sm">
+							{data.connections.length
+								? "Connect another assistant"
+								: "Let an AI assistant read your training"}: add this address as a custom connector
+							in Claude or ChatGPT
+						</span>
+						<code class="font-mono text-xs text-soft break-all">{data.connectorUrl}</code>
+					</div>
+					<button onclick={copyConnectorUrl} class={secondaryBtn}>
+						<i class="i-tabler-copy block size-4"></i>Copy
+					</button>
+				</div>
 			</section>
 
 			<section aria-labelledby="sync-head" class={card}>

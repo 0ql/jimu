@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "./db";
-import { sessions, users } from "./db/schema";
+import { loginSessions, users } from "./db/schema";
 
 export const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 10; // 10 Days
 
@@ -11,7 +11,7 @@ export const createSession = async (userUuid: string) => {
 		expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
 	};
 
-	await db.insert(sessions).values(session);
+	await db.insert(loginSessions).values(session);
 	return session;
 };
 
@@ -19,22 +19,22 @@ export const createSession = async (userUuid: string) => {
 export const validateSession = async (sessionId: string) => {
 	const session = await db
 		.select({
-			id: sessions.id,
-			userUuid: sessions.userUuid,
-			expiresAt: sessions.expiresAt,
+			id: loginSessions.id,
+			userUuid: loginSessions.userUuid,
+			expiresAt: loginSessions.expiresAt,
 			isAdmin: users.isAdmin,
 		})
-		.from(sessions)
-		.innerJoin(users, eq(users.uuid, sessions.userUuid))
-		.where(eq(sessions.id, sessionId));
+		.from(loginSessions)
+		.innerJoin(users, eq(users.uuid, loginSessions.userUuid))
+		.where(eq(loginSessions.id, sessionId));
 	if (!session[0]) return null;
 	if (session[0].expiresAt < new Date()) {
-		await db.delete(sessions).where(eq(sessions.id, sessionId));
+		await db.delete(loginSessions).where(eq(loginSessions.id, sessionId));
 		return null;
 	}
 	return session[0];
 };
 
 export const deleteSession = async (sessionId: string) => {
-	await db.delete(sessions).where(eq(sessions.id, sessionId));
+	await db.delete(loginSessions).where(eq(loginSessions.id, sessionId));
 };

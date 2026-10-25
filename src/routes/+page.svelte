@@ -5,19 +5,29 @@
 	import {
 		exercises,
 		routines,
+		splits,
 		loadDB,
 		loadExercises,
 		loadRoutines,
+		loadSplits,
 		addExercise,
 		dataRevision,
-		syncOnStart,
+		syncWithServer,
 		saveRoutine,
+		markTrained,
+		trainingRoutineId,
+		unmarkTrained,
+		type Exercise,
 	} from "./idb";
 	import { dateStamp, daysAgo, isTodayLine, parseLog } from "#lib/sets.js";
+	import { isoDate, members, relativeDay, splitStatus, trainedDates } from "#lib/splits.js";
+	import { routineBadges } from "#lib/routineBadges.js";
+	import { toast } from "#lib/toast.svelte.js";
 	import type { PageProps } from "./$types";
 
 	import ExerciseDetail from "./ExerciseDetail.svelte";
 	import ExercisePage from "./ExercisePage.svelte";
+	import SplitNotice, { type NoticeOption } from "./SplitNotice.svelte";
 	import Nav from "./Nav.svelte";
 	import SearchBar from "./SearchBar.svelte";
 	import Popup from "#lib/ui/Popup.svelte";
@@ -42,12 +52,17 @@
 		await loadDB();
 		await loadExercises();
 		await loadRoutines();
+		await loadSplits();
 
-		// "Train" on the routines page links here with ?routine=<id>.
+		// "Train" on the routines page links here with ?routine=<id>. On a new device the routines
+		// only arrive with the sync below, so it is tried again after that.
 		const routineParam = Number(page.url.searchParams.get("routine"));
-		if (routineParam && $routines.some((r) => r.id === routineParam)) {
-			selectedRoutineId = routineParam;
-		}
+		const applyRoutineParam = () => {
+			if (routineParam && $routines.some((r) => r.id === routineParam)) {
+				selectedRoutineId = routineParam;
+			}
+		};
+		applyRoutineParam();
 
 		// Sessions link here with ?exercise=<id>: select it on desktop, open its page on phones.
 		const exerciseParam = Number(page.url.searchParams.get("exercise"));
@@ -63,10 +78,18 @@
 			return;
 		}
 
-		await syncOnStart("exercises", data.lastModified?.getTime() ?? 0);
+		await syncWithServer("exercises", data.lastModified?.getTime() ?? 0);
 		// After a possible first download, so a new device doesn't claim to have no exercises.
 		loaded = true;
-		await syncOnStart("routines", data.routineLastModified?.getTime() ?? 0);
+		await syncWithServer("routines", data.routineLastModified?.getTime() ?? 0);
+		if (selectedRoutineId === null) applyRoutineParam();
+		await syncWithServer("splits", data.splitLastModified?.getTime() ?? 0);
+	});
+
+	// Logging with a routine filter on counts the day for that routine (see recordTraining).
+	$effect(() => {
+		trainingRoutineId.set(selectedRoutineId);
+		return () => trainingRoutineId.set(null);
 	});
 
 	const activeRoutine = $derived(
@@ -156,6 +179,70 @@
 			next: list[i + 1] ?? null,
 		};
 	});
+
+	// Without a routine filter, logging an exercise that belongs to a split doesn't count for it:
+	// the exercise then offers its routines, the one due soonest first.
+	const today = isoDate();
+	const badges = $derived(routineBadges($routines));
+	/** Exercises whose notice was closed; until the page is left. */
+	let dismissed = $state<number[]>([]);
+	const nextDue = $derived.by(() => {
+		const due = new Map<number, string>();
+		if ($splits.length === 0) return due;
+		const trained = trainedDates({ routines: $routines, exercises: $exercises });
+		for (const split of $splits) {
+			for (const day of splitStatus(split, trained, today).days) {
+				if (day.routineId === null || day.done) continue;
+				const known = due.get(day.routineId);
+				if (!known || day.date < known) due.set(day.routineId, day.date);
+			}
+		}
+		return due;
+	});
+
+	const noticeFor = (exercise: Exercise | null): NoticeOption[] | null => {
+		if (!exercise || activeRoutine || $splits.length === 0) return null;
+		if (dismissed.includes(exercise.id!)) return null;
+		const inSplit = new Set($splits.flatMap(members));
+		const candidates = $routines.filter(
+			(r) => inSplit.has(r.id!) && r.exerciseIds.includes(exercise.id!),
+		);
+		// Already counted today for one of them (picked earlier, or logged with its filter on).
+		if (!candidates.length || candidates.some((r) => r.trainedOn?.includes(today))) return null;
+		return candidates
+			.map((r) => {
+				const date = nextDue.get(r.id!);
+				return {
+					id: r.id!,
+					name: r.name,
+					badge: badges.get(r.id!),
+					date: date ?? "9999",
+					when: !date ? "" : date === today ? "due today" : relativeDay(date, today),
+					dueToday: date === today,
+				};
+			})
+			.sort((a, b) => a.date.localeCompare(b.date));
+	};
+	const pageNotice = $derived(noticeFor(pageExercise));
+	const deskNotice = $derived(wide ? noticeFor(selected) : null);
+
+	/** Turns the routine's filter on and counts today for it, with an undo in the toast. */
+	const pickRoutine = async (id: number) => {
+		const before = selectedRoutineId;
+		const routine = $routines.find((r) => r.id === id);
+		if (!routine) return;
+		const wasCounted = routine.trainedOn?.includes(today) ?? false;
+		selectedRoutineId = id;
+		await markTrained(id);
+		const splitNames = $splits.filter((s) => members(s).includes(id)).map((s) => s.name);
+		toast.success(`Today counts for ${routine.name} in ${splitNames.join(", ")}`, 6000, {
+			label: "Undo",
+			run: () => {
+				selectedRoutineId = before;
+				if (!wasCounted) unmarkTrained(id);
+			},
+		});
+	};
 
 	const backToList = () => {
 		(listEl?.querySelector(`[data-id="${selected?.id}"]`) as HTMLElement | null)?.focus();
@@ -331,7 +418,12 @@
 		<section class="flex-1 min-w-0" aria-label="Selected exercise">
 			{#if selected}
 				{#key `${selected.id}:${$dataRevision}`}
-					<ExerciseDetail bind:this={detail} exercise={selected} onescape={backToList} />
+					<ExerciseDetail
+						bind:this={detail}
+						exercise={selected}
+						onescape={backToList}
+						notice={deskNotice ? deskNoticeSnippet : undefined}
+					/>
 				{/key}
 			{:else if loaded && $exercises.length === 0}
 				<p class="text-subtle py-16 text-center">
@@ -395,9 +487,32 @@
 			routine={routineNav}
 			onback={closePage}
 			onnavigate={(id) => replaceState("", { exercise: id })}
+			notice={pageNotice ? pageNoticeSnippet : undefined}
 		/>
 	{/key}
 {/if}
+
+{#snippet pageNoticeSnippet()}
+	{#if pageNotice && pageExercise}
+		{@const id = pageExercise.id!}
+		<SplitNotice
+			options={pageNotice}
+			onpick={pickRoutine}
+			ondismiss={() => (dismissed = [...dismissed, id])}
+		/>
+	{/if}
+{/snippet}
+
+{#snippet deskNoticeSnippet()}
+	{#if deskNotice && selected}
+		{@const id = selected.id!}
+		<SplitNotice
+			options={deskNotice}
+			onpick={pickRoutine}
+			ondismiss={() => (dismissed = [...dismissed, id])}
+		/>
+	{/if}
+{/snippet}
 
 <Popup title="New exercise" bind:showPopup={showAddPopup}>
 	<form
