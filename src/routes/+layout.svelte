@@ -6,7 +6,7 @@
 	import { page } from "$app/state";
 	import TabBar from "./TabBar.svelte";
 	import OfflineBanner from "./OfflineBanner.svelte";
-	import { onMount } from "svelte";
+	import { onMount, untrack } from "svelte";
 	import { online, warmOfflineCache } from "#lib/network.js";
 	import { checkForUpdates } from "./idb";
 	import { toast } from "#lib/toast.svelte.js";
@@ -65,6 +65,22 @@
 		if (startupChecked && $online && page.data.userUuid) warmOfflineCache();
 	});
 
+	// The first sync runs once the startup probe is done, and again whenever someone signs in:
+	// logging in keeps the layout mounted, so a check made at startup ran signed out. Logging
+	// out clears the local data, so signing in again (even as the same account) checks again.
+	// Offline it waits for the connection, so the account still gets its first sync.
+	let checkedFor: string | undefined;
+	$effect(() => {
+		const uuid: string | undefined = page.data.userUuid;
+		if (!uuid) {
+			checkedFor = undefined;
+			return;
+		}
+		if (!startupChecked || !$online || uuid === checkedFor) return;
+		checkedFor = uuid;
+		untrack(() => check(true));
+	});
+
 	onMount(() => {
 		const goOffline = () => online.set(false);
 		const onWorkerMessage = (e: MessageEvent) => {
@@ -77,10 +93,7 @@
 		// A page served from the worker's copy may still think it is online, and the worker's
 		// message can arrive before this listener: ask the server once at startup.
 		let wasOnline = $online;
-		probe().then(() => {
-			startupChecked = true;
-			check(true);
-		});
+		probe().then(() => (startupChecked = true));
 		const onShown = () => check();
 		document.addEventListener("visibilitychange", onShown);
 		addEventListener("focus", onShown);
