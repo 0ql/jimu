@@ -4,7 +4,10 @@ import { CORS, preflight, unauthorized, verifyAccessToken } from "#lib/server/oa
 import type { RequestHandler } from "./$types";
 
 // One fresh server per request, scoped to the user the token belongs to (stateless serving).
-const handler = createMcpHandler(({ authInfo }) => buildServer(String(authInfo?.extra?.userUuid)));
+// The write tools are only there for connections the user allowed to make changes.
+const handler = createMcpHandler(({ authInfo }) =>
+	buildServer(String(authInfo?.extra?.userUuid), authInfo?.scopes.includes("write") ?? false),
+);
 
 const serve: RequestHandler = async ({ request, url }) => {
 	const auth = await verifyAccessToken(request, url.origin);

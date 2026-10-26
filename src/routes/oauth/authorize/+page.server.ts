@@ -9,8 +9,8 @@ import {
 	loadClient,
 	newSecret,
 	redirectAllowed,
+	requestedScopes,
 	resourceUrl,
-	SCOPE,
 } from "#lib/server/oauth.js";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -59,11 +59,12 @@ const check = async (url: URL) => {
 	if (resource && !isOwnResource(resource, url.origin))
 		back(redirectUri, url.origin, { error: "invalid_target" }, state);
 
-	return { client, redirectUri, challenge, state };
+	const scopes = requestedScopes(p.get("scope"));
+	return { client, redirectUri, challenge, state, scopes };
 };
 
 export const load: PageServerLoad = async ({ url, locals }) => {
-	const { client, redirectUri } = await check(url);
+	const { client, redirectUri, scopes } = await check(url);
 	const [user] = await db
 		.select({ username: users.username })
 		.from(users)
@@ -74,14 +75,19 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		// The consent screen shows where the browser goes next (MCP authorization spec).
 		returnHost: target.host,
 		returnIsLocal: target.protocol === "http:",
+		asksToWrite: scopes.includes("write"),
 		username: user?.username ?? "",
 	};
 };
 
 export const actions: Actions = {
-	// Both actions check the request again from the URL: nothing in the form is trusted.
-	allow: async ({ url, locals }) => {
-		const { client, redirectUri, challenge, state } = await check(url);
+	// Both actions check the request again from the URL; the form only says whether to allow changes.
+	allow: async ({ url, locals, request }) => {
+		const { client, redirectUri, challenge, state, scopes } = await check(url);
+		// The one thing taken from the form: whether the user allowed changes. It can only narrow
+		// what the app asked for, never widen it.
+		const allowChanges = (await request.formData()).get("allow_changes") === "on";
+		const scope = scopes.filter((s) => s === "read" || allowChanges).join(" ");
 		const code = newSecret();
 		// Codes that were never exchanged are dropped once they are well past their expiry.
 		await db
@@ -98,7 +104,7 @@ export const actions: Actions = {
 			clientId: client.clientId,
 			clientName: client.name,
 			redirectUri,
-			scope: SCOPE,
+			scope,
 			resource: resourceUrl(url.origin),
 			codeHash: hash(code),
 			codeChallenge: challenge,

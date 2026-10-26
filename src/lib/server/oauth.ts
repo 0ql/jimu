@@ -4,12 +4,25 @@ import { db } from "#lib/server/db/index.js";
 import { oauthGrants } from "#lib/server/db/schema.js";
 
 /**
- * jimu as its own small OAuth 2.1 authorization server, for the read-only Claude connector.
+ * jimu as its own small OAuth 2.1 authorization server, for the Claude and ChatGPT connector.
  * Claude identifies itself with a Client ID Metadata Document (CIMD): its client ID is the
  * HTTPS URL of a JSON document listing its redirect URIs, so there is no client registration.
- * Public clients only (no secrets), PKCE S256 required, one scope.
+ * Public clients only (no secrets), PKCE S256 required.
+ *
+ * Two scopes: "read" for the training data, "write" to create and change exercises, routines
+ * and splits (never to delete). Write is only granted when the user ticks it on the consent page.
  */
-export const SCOPE = "read";
+export const SCOPES = ["read", "write"] as const;
+export type Scope = (typeof SCOPES)[number];
+
+/** The scopes a client asked for that jimu knows, read always included; none asked means all. */
+export const requestedScopes = (param: string | null): Scope[] => {
+	const asked = (param ?? "").split(/\s+/).filter((s): s is Scope => SCOPES.includes(s as Scope));
+	if (!asked.length) return [...SCOPES];
+	return SCOPES.filter((s) => s === "read" || asked.includes(s));
+};
+
+export const canWrite = (scope: string) => scope.split(" ").includes("write");
 export const CODE_TTL_MS = 5 * 60 * 1000;
 export const ACCESS_TTL_MS = 60 * 60 * 1000;
 export const REFRESH_TTL_MS = 60 * 24 * 60 * 60 * 1000;
@@ -152,7 +165,7 @@ export const unauthorized = (origin: string, hadToken: boolean) =>
 		status: 401,
 		headers: {
 			"content-type": "application/json",
-			"www-authenticate": `Bearer ${hadToken ? 'error="invalid_token", ' : ""}resource_metadata="${resourceMetadataUrl(origin)}", scope="${SCOPE}"`,
+			"www-authenticate": `Bearer ${hadToken ? 'error="invalid_token", ' : ""}resource_metadata="${resourceMetadataUrl(origin)}", scope="${SCOPES.join(" ")}"`,
 			...CORS,
 		},
 	});

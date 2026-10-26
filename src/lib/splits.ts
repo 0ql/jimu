@@ -271,3 +271,53 @@ export const splitStatus = (
 		days,
 	};
 };
+
+const sameList = <T>(a: T[] = [], b: T[] = []) =>
+	a.length === b.length && a.every((v, i) => v === b[i]);
+
+/**
+ * The day a new or changed split counts from. A rotation that keeps its dates is anchored so it
+ * carries on from where the split stands now instead of jumping; weekdays only catch up what was
+ * missed after the change. `original` is the split before the change (null for a new one).
+ */
+export const splitStart = (
+	draft: Split,
+	original: Split | null,
+	trained: Map<number, string[]>,
+	today: string,
+) => {
+	const d = draft;
+	if (d.kind === "weekdays") {
+		const unchanged =
+			original?.kind === "weekdays" &&
+			sameList(original.days, d.days) &&
+			(original.catchUp || !d.catchUp);
+		return unchanged ? original.start : today;
+	}
+	if (d.keepOrder) return original?.start ?? today;
+	if (
+		original?.kind === "rotation" &&
+		!original.keepOrder &&
+		original.pace === d.pace &&
+		original.everyDays === d.everyDays &&
+		sameList(original.gymDays, d.gymDays) &&
+		sameList(original.routineIds, d.routineIds)
+	)
+		return original.start;
+	const flowing = splitStatus(
+		{ ...d, keepOrder: true, start: original?.start ?? today },
+		trained,
+		today,
+		60,
+	).next;
+	if (!flowing) return today;
+	// Step back to where the first routine would have been, so the dates line up from here.
+	const steps = members(d).indexOf(flowing.routineId);
+	if (d.pace !== "gym-days") return addDays(flowing.date, -steps * d.everyDays);
+	let date = flowing.date;
+	for (let i = 0; i < steps; i++) {
+		do date = addDays(date, -1);
+		while (!d.gymDays.includes(weekday(date)));
+	}
+	return date;
+};

@@ -4,11 +4,11 @@
 	import type { Badge } from "#lib/routineBadges.js";
 	import {
 		WEEKDAYS,
-		addDays,
 		dayMonth,
 		lastTrained,
 		members,
 		newSplit,
+		splitStart,
 		splitStatus,
 		weekday,
 	} from "#lib/splits.js";
@@ -50,48 +50,8 @@
 	let confirmDelete = $state(false);
 	let adding = $state(false);
 
-	const sameList = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((v, i) => v === b[i]);
-
-	/**
-	 * The day the schedule counts from. A rotation that keeps its dates is anchored so it carries
-	 * on from where the split stands now; weekdays only catch up what was missed after a change.
-	 */
-	const start = $derived.by(() => {
-		const d = draft;
-		if (d.kind === "weekdays") {
-			const unchanged =
-				original?.kind === "weekdays" &&
-				sameList(original.days, d.days) &&
-				(original.catchUp || !d.catchUp);
-			return unchanged ? original.start : today;
-		}
-		if (d.keepOrder) return original?.start ?? today;
-		if (
-			original?.kind === "rotation" &&
-			!original.keepOrder &&
-			original.pace === d.pace &&
-			original.everyDays === d.everyDays &&
-			sameList(original.gymDays ?? [], d.gymDays) &&
-			sameList(original.routineIds, d.routineIds)
-		)
-			return original.start;
-		const flowing = splitStatus(
-			{ ...d, keepOrder: true, start: original?.start ?? today },
-			trained,
-			today,
-			60,
-		).next;
-		if (!flowing) return today;
-		// Step back to where the first routine would have been, so the dates line up from here.
-		const steps = members(d).indexOf(flowing.routineId);
-		if (d.pace === "interval") return addDays(flowing.date, -steps * d.everyDays);
-		let date = flowing.date;
-		for (let i = 0; i < steps; i++) {
-			do date = addDays(date, -1);
-			while (!d.gymDays.includes(weekday(date)));
-		}
-		return date;
-	});
+	/** The day the schedule counts from (see splitStart). */
+	const start = $derived(splitStart(draft, original, trained, today));
 
 	const preview = $derived(splitStatus({ ...draft, start }, trained, today, 14).days);
 

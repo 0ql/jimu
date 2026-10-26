@@ -32,15 +32,39 @@
 			<li class="flex gap-2.5">
 				<i class="i-tabler-eye block size-[18px] shrink-0 mt-px text-signal-ink"></i>
 				<span class="text-soft">
-					<span class="text-fg font-semibold">Can read</span> your exercises, logs, sessions and routines
+					<span class="text-fg font-semibold">Can read</span> your exercises, logs, sessions, routines
+					and splits
 				</span>
 			</li>
-			<li class="flex gap-2.5">
-				<i class="i-tabler-pencil-off block size-[18px] shrink-0 mt-px text-subtle"></i>
-				<span class="text-soft">
-					<span class="text-fg font-semibold">Can't change</span> or delete anything
-				</span>
-			</li>
+			{#if data.asksToWrite}
+				<li>
+					<label class="flex gap-2.5 cursor-pointer">
+						<input
+							type="checkbox"
+							name="allow_changes"
+							checked
+							class="m-0 mt-0.5 size-[18px] shrink-0 accent-signal-ink cursor-pointer"
+						/>
+						<span class="text-soft">
+							<span class="text-fg font-semibold">Can make changes:</span> create and edit exercises,
+							routines and splits, and log sets
+						</span>
+					</label>
+				</li>
+				<li class="flex gap-2.5">
+					<i class="i-tabler-trash-off block size-[18px] shrink-0 mt-px text-subtle"></i>
+					<span class="text-soft">
+						<span class="text-fg font-semibold">Can't delete</span> anything
+					</span>
+				</li>
+			{:else}
+				<li class="flex gap-2.5">
+					<i class="i-tabler-pencil-off block size-[18px] shrink-0 mt-px text-subtle"></i>
+					<span class="text-soft">
+						<span class="text-fg font-semibold">Can't change</span> or delete anything
+					</span>
+				</li>
+			{/if}
 			<li class="flex gap-2.5">
 				<i class="i-tabler-plug-connected-x block size-[18px] shrink-0 mt-px text-subtle"></i>
 				<span class="text-soft">Disconnect it any time in Settings</span>

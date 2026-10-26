@@ -72,7 +72,7 @@
 			);
 			return;
 		}
-		toast.success("Disconnected. The app can no longer read your data.");
+		toast.success("Disconnected. The app can no longer reach your data.");
 		await invalidateAll();
 	};
 	const copyConnectorUrl = async () => {
@@ -371,9 +371,9 @@
 						<div class="flex-1 min-w-0 flex flex-col">
 							<span class="font-semibold truncate">{app.name}</span>
 							<span class="text-xs text-subtle">
-								{app.host} · read only · since {connectedOn(app.createdAt)} · {usedAgo(
-									app.lastUsedAt,
-								)}
+								{app.host} · {app.canWrite ? "can make changes" : "read only"} · since {connectedOn(
+									app.createdAt,
+								)} · {usedAgo(app.lastUsedAt)}
 							</span>
 						</div>
 						<button

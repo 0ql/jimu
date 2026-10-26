@@ -1,7 +1,7 @@
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "#lib/server/db/index.js";
 import { oauthGrants, users } from "#lib/server/db/schema.js";
-import { resourceUrl } from "#lib/server/oauth.js";
+import { canWrite, resourceUrl } from "#lib/server/oauth.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -19,6 +19,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			clientId: oauthGrants.clientId,
 			createdAt: oauthGrants.createdAt,
 			lastUsedAt: oauthGrants.lastUsedAt,
+			scope: oauthGrants.scope,
 		})
 		.from(oauthGrants)
 		.where(and(eq(oauthGrants.userUuid, locals.user.uuid), isNotNull(oauthGrants.refreshHash)))
@@ -32,6 +33,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			host: new URL(c.clientId).host,
 			createdAt: c.createdAt.getTime(),
 			lastUsedAt: c.lastUsedAt?.getTime() ?? null,
+			canWrite: canWrite(c.scope),
 		})),
 	};
 };

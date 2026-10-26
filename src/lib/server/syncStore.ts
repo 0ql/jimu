@@ -74,3 +74,51 @@ export const loadStore = async (store: Store, uuid: string) => {
 		},
 	});
 };
+
+/**
+ * Changes stores on the server itself, for the connector's write tools. The current lists are
+ * read, `change` edits them in place, and each list that changed is written back with a new
+ * version, all in one transaction. Devices notice the new version on their next check and merge
+ * it with their own edits like a change from another device. If `change` throws, nothing is
+ * written.
+ */
+export const changeStores = <T>(
+	uuid: string,
+	names: Store[],
+	change: (lists: Record<Store, unknown[]>) => T,
+): T =>
+	db.transaction((tx) => {
+		const lists = { exercises: [], routines: [], splits: [] } as Record<Store, unknown[]>;
+		const before = new Map<Store, { json: string; current: number }>();
+		for (const name of names) {
+			const { table, data } = STORES[name];
+			const row = tx
+				.select({ lastModified: table.lastModified, data })
+				.from(table)
+				.where(eq(table.uuid, uuid))
+				.get();
+			const json = row?.data ?? "[]";
+			before.set(name, { json, current: row?.lastModified?.getTime() ?? 0 });
+			try {
+				const parsed = JSON.parse(json);
+				lists[name] = Array.isArray(parsed) ? parsed : [];
+			} catch {
+				lists[name] = [];
+			}
+		}
+
+		const result = change(lists);
+
+		for (const name of names) {
+			const json = JSON.stringify(lists[name]);
+			const { json: was, current } = before.get(name)!;
+			if (json === was) continue;
+			const { table, column } = STORES[name];
+			const values = { [column]: json, lastModified: new Date(Math.max(Date.now(), current + 1)) };
+			tx.insert(table)
+				.values({ uuid, ...values } as typeof table.$inferInsert)
+				.onConflictDoUpdate({ target: table.uuid, set: values })
+				.run();
+		}
+		return result;
+	});

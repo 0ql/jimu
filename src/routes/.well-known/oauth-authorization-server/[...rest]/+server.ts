@@ -1,5 +1,5 @@
 import { json } from "@sveltejs/kit";
-import { CORS, preflight, SCOPE } from "#lib/server/oauth.js";
+import { CORS, preflight, SCOPES } from "#lib/server/oauth.js";
 import type { RequestHandler } from "./$types";
 
 // RFC 8414 authorization server metadata. Advertising CIMD together with "none" as the token
@@ -11,7 +11,7 @@ export const GET: RequestHandler = ({ url }) =>
 			issuer: url.origin,
 			authorization_endpoint: `${url.origin}/oauth/authorize`,
 			token_endpoint: `${url.origin}/oauth/token`,
-			scopes_supported: [SCOPE],
+			scopes_supported: [...SCOPES],
 			response_types_supported: ["code"],
 			grant_types_supported: ["authorization_code", "refresh_token"],
 			code_challenge_methods_supported: ["S256"],
