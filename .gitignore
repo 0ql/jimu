@@ -26,3 +26,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # SQLite
 *.db
+
+# Local scripts (e.g. the demo account seed)
+scripts/
