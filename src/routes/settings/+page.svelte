@@ -32,6 +32,9 @@
 		type HapticStrength,
 	} from "#lib/haptics.js";
 	import { theme, THEMES } from "#lib/theme.js";
+	import { setLetters } from "#lib/setLetters.js";
+	import { unit } from "#lib/unit.js";
+	import { DEFAULT_LETTERS, validLetter } from "#lib/sets.js";
 
 	let { data } = $props();
 
@@ -288,6 +291,53 @@
 	const cardHead =
 		"m-0 px-4 pt-4 pb-1 font-display font-semibold text-[11px] tracking-[0.08em] uppercase text-subtle";
 	const row = "flex items-center gap-3 px-4 py-3.5 min-h-14";
+
+	// The unit belongs to the account, so it needs the server; offline it says so.
+	let unitProblem: string | null = $state(null);
+	let savingUnit = $state(false);
+	const setUnit = async (next: "kg" | "lb") => {
+		if (next === unit()) return;
+		unitProblem = null;
+		savingUnit = true;
+		try {
+			const res = await fetch("/settings/unit", {
+				method: "PUT",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ unit: next }),
+			}).catch(() => null);
+			if (!res?.ok) {
+				unitProblem = res
+					? "Couldn't save the unit. Try again."
+					: "Changing the unit needs a connection.";
+				return;
+			}
+			await invalidateAll();
+		} finally {
+			savingUnit = false;
+		}
+	};
+
+	// The warm-up and drop letters: a valid pair is used right away, anything else is explained
+	// and not saved.
+	let lettersProblem: string | null = $state(null);
+	const setLetter = (kind: "warmup" | "drop", input: HTMLInputElement) => {
+		const letter = input.value.trim().toLowerCase();
+		input.value = letter;
+		const next = { ...$setLetters, [kind]: letter };
+		if (!letter) lettersProblem = "Pick a letter for both.";
+		else if (!validLetter(letter))
+			lettersProblem = "Use a letter other than x (x separates weight and reps).";
+		else if (next.warmup === next.drop)
+			lettersProblem = "Warm-up and drop sets need different letters.";
+		else {
+			lettersProblem = null;
+			$setLetters = next;
+		}
+	};
+	const resetLetters = () => {
+		lettersProblem = null;
+		$setLetters = DEFAULT_LETTERS;
+	};
 	const divider = "border-t-solid border-t-1 border-t-divider";
 	const secondaryBtn =
 		"h-10 px-3.5 rounded-[10px] border-none bg-surface-3 cursor-pointer flex items-center gap-2 text-sm shrink-0 disabled:opacity-50 disabled:cursor-default";
@@ -443,6 +493,35 @@
 
 			<section aria-labelledby="appearance-head" class={card}>
 				<h2 id="appearance-head" class={cardHead}>Appearance</h2>
+				<div
+					class="{row} border-b-solid border-b-1 border-b-divider-2"
+					role="group"
+					aria-labelledby="unit-label"
+				>
+					<i class="i-tabler-weight block size-5 text-subtle shrink-0"></i>
+					<span id="unit-label" class="flex-1 min-w-0 flex flex-col">
+						<span class="font-semibold">Unit</span>
+						<span class="text-xs {unitProblem ? 'text-danger' : 'text-subtle'}"
+							>{unitProblem ??
+								"For your account. Only the label: logged numbers stay as they are"}</span
+						>
+					</span>
+					<div
+						class="flex gap-1 p-1 rounded-xl bg-bg border-solid border-1 border-hairline shrink-0"
+					>
+						{#each ["kg", "lb"] as const as option}
+							<button
+								onclick={() => setUnit(option)}
+								aria-pressed={unit() === option}
+								disabled={savingUnit}
+								class="h-8 px-3 rounded-lg border-none cursor-pointer text-[13px] font-semibold {unit() ===
+								option
+									? 'bg-dark text-bg'
+									: 'bg-transparent text-soft'}">{option}</button
+							>
+						{/each}
+					</div>
+				</div>
 				<div class={row} role="group" aria-labelledby="theme-label">
 					<i class="i-tabler-palette block size-5 text-subtle shrink-0"></i>
 					<span id="theme-label" class="flex-1 min-w-0 flex flex-col">
@@ -542,6 +621,46 @@
 						</span>
 					</p>
 				{/if}
+				<div
+					class="{row} flex-wrap border-t-solid border-t-1 border-t-divider-2"
+					role="group"
+					aria-labelledby="letters-label"
+				>
+					<i class="i-tabler-letter-case block size-5 text-subtle shrink-0"></i>
+					<span id="letters-label" class="flex-1 min-w-40 flex flex-col">
+						<span class="font-semibold">Set letters</span>
+						<span class="text-xs {lettersProblem ? 'text-danger' : 'text-subtle'}">
+							{lettersProblem ??
+								`What you type before a warm-up or drop set, on this device. Logs stay readable everywhere.`}
+						</span>
+					</span>
+					<div class="flex items-center gap-3 shrink-0">
+						{#each [["warmup", "Warm-up"], ["drop", "Drop"]] as const as [kind, label]}
+							<label class="flex items-center gap-1.5 text-[13px] text-subtle">
+								{label}
+								<input
+									value={$setLetters[kind]}
+									oninput={(e) => setLetter(kind, e.currentTarget)}
+									maxlength="1"
+									autocomplete="off"
+									autocapitalize="off"
+									spellcheck="false"
+									aria-label="{label} letter"
+									class="w-10 h-10 rounded-[10px] border-solid border-1 text-center font-mono text-base bg-bg outline-none focus:border-signal-ink {lettersProblem
+										? 'border-destructive'
+										: 'border-edge-2'}"
+								/>
+							</label>
+						{/each}
+						{#if $setLetters.warmup !== "a" || $setLetters.drop !== "d"}
+							<button
+								onclick={resetLetters}
+								class="h-8 px-2.5 rounded-lg border-none bg-surface-3 cursor-pointer text-[13px]"
+								>Reset</button
+							>
+						{/if}
+					</div>
+				</div>
 			</section>
 
 			<section
@@ -616,13 +735,29 @@
 						Each line starts with the day. Add a year when you like: 18.10.26 or 18.10.2026
 					</dd>
 					<dt class="font-mono text-[13px] text-fg">30x10</dt>
-					<dd class="m-0 text-soft">A working set: 30 kg for 10 reps. Decimals work: 27.5x10</dd>
+					<dd class="m-0 text-soft">
+						A working set: 30 {unit()} for 10 reps. Decimals work: 27.5x10
+					</dd>
 					<dt class="font-mono text-[13px] text-fg">x8</dt>
 					<dd class="m-0 text-soft">Same weight as the set before, 8 reps</dd>
-					<dt class="font-mono text-[13px] text-faint">a10x12</dt>
+					<dt class="font-mono text-[13px] text-faint">{$setLetters.warmup}10x12</dt>
 					<dd class="m-0 text-soft">Warm-up set, left out of volume</dd>
-					<dt class="font-mono text-[13px] text-drop">d15x7</dt>
+					<dt class="font-mono text-[13px] text-drop">{$setLetters.drop}15x7</dt>
 					<dd class="m-0 text-soft">Drop set, counted in volume</dd>
+					<dt class="font-mono text-[13px] text-fg">x20</dt>
+					<dd class="m-0 text-soft">No weight at all: bodyweight, 20 reps</dd>
+					<dt class="font-mono text-[13px] text-fg">+10x8</dt>
+					<dd class="m-0 text-soft">
+						Bodyweight plus 10 {unit()} (a dip belt). Only the added weight counts in volume
+					</dd>
+					<dt class="font-mono text-[13px] text-fg">-20x8</dt>
+					<dd class="m-0 text-soft">
+						Bodyweight with 20 {unit()} of assistance, e.g. machine pull-ups
+					</dd>
+					<dt class="font-mono text-[13px] text-fg">20x12/11</dt>
+					<dd class="m-0 text-soft">
+						One side at a time: 12 reps on the side you start with, 11 on the other. Both count
+					</dd>
 				</dl>
 			</section>
 		</div>

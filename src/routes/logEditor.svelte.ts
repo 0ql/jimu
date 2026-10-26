@@ -3,25 +3,36 @@ import { get } from "svelte/store";
 import { exercises, recordTraining, registerEditor, saveExercise, type Exercise } from "./idb";
 import { mergeExercises } from "#lib/merge.js";
 import { datedLines, dateStamp, isTodayLine, lineStats, parseLine, parseLog } from "#lib/sets.js";
+import { setLetters, toStored, toTyped } from "#lib/setLetters.js";
 import type { KeypadKey } from "#lib/ui/SetKeypad.svelte";
 
-type Fields = Pick<Exercise, "title" | "workoutsString" | "note">;
+type Fields = Pick<Exercise, "title" | "workoutsString" | "note" | "perSide">;
 const fieldsOf = (e: Fields): Fields => ({
 	title: e.title,
 	workoutsString: e.workoutsString,
 	note: e.note?.trim() || undefined,
+	perSide: e.perSide || undefined,
 });
 const sameFields = (a: Fields, b: Fields) =>
-	a.title === b.title && a.workoutsString === b.workoutsString && (a.note ?? "") === (b.note ?? "");
+	a.title === b.title &&
+	a.workoutsString === b.workoutsString &&
+	(a.note ?? "") === (b.note ?? "") &&
+	!!a.perSide === !!b.perSide;
 
 /**
  * Editing state for one exercise's log, shared by the phone row and the desktop pane:
  * the text, its parsed current line, saving, and the set keypad's insert logic.
+ * `workoutsString` is the log as typed, with this device's warm-up and drop letters; it is
+ * parsed and saved as stored, with "a" and "d" (see #lib/setLetters).
  */
 export class LogEditor {
 	title = $state("");
 	workoutsString = $state("");
+	/** This device's warm-up and drop letters, for the keypad, hints and placeholder. */
+	readonly letters = get(setLetters);
 	note = $state("");
+	/** Trained one side at a time: the volume counts both sides. */
+	perSide = $state(false);
 	textarea: HTMLTextAreaElement | undefined = $state();
 
 	/** Touch devices get the in-app set keypad instead of the system keyboard. */
@@ -29,26 +40,34 @@ export class LogEditor {
 	padOpen = $state(false);
 	textKeyboard = $state(false);
 	readonly stamp = dateStamp();
+	readonly placeholder = `${this.stamp} ${this.letters.warmup}10x12 30x10 x8 x7 ${this.letters.drop}15x7`;
 
-	log = $derived(parseLog(this.workoutsString));
+	/** The log as it is stored (a/d letters). */
+	stored = $derived(toStored(this.workoutsString));
+	log = $derived(parseLog(this.stored));
 	isToday = $derived(isTodayLine(this.log.current));
-	stats = $derived(lineStats(this.log.current.sets));
+	stats = $derived(lineStats(this.log.current.sets, this.perSide));
 	delta = $derived(
 		this.log.previous
-			? Math.round(this.stats.volume - lineStats(this.log.previous.sets).volume)
+			? Math.round(this.stats.volume - lineStats(this.log.previous.sets, this.perSide).volume)
 			: null,
 	);
 	sessionCount = $derived(this.workoutsString.split("\n").filter((l) => l.trim()).length);
 	/** Each non-empty log line, with its full date (year worked out like on the sessions page). */
 	sessions = $derived.by(() => {
-		const dated = datedLines(this.workoutsString);
+		const dated = datedLines(this.stored);
 		let next = 0;
-		return this.workoutsString
+		return this.stored
 			.split("\n")
 			.filter((l) => l.trim())
 			.map((line) => {
 				const parsed = parseLine(line);
-				return { ...parsed, fullDate: parsed.date ? (dated[next++]?.date ?? null) : null };
+				return {
+					...parsed,
+					// Shown as typed, with this device's letters.
+					rest: toTyped(parsed.rest),
+					fullDate: parsed.date ? (dated[next++]?.date ?? null) : null,
+				};
 			});
 	});
 	/** Earlier sessions, newest first. */
@@ -57,7 +76,7 @@ export class LogEditor {
 	recent = $derived(
 		this.sessions.slice(-8).map((p) => ({
 			date: p.date?.slice(0, 5) ?? "—",
-			volume: lineStats(p.sets).volume,
+			volume: lineStats(p.sets, this.perSide).volume,
 		})),
 	);
 	inputmode: "text" | "none" | "decimal" = $derived(
@@ -75,8 +94,9 @@ export class LogEditor {
 		this.#exercise = exercise;
 		const e = exercise();
 		this.title = e.title;
-		this.workoutsString = e.workoutsString;
+		this.workoutsString = toTyped(e.workoutsString);
 		this.note = e.note ?? "";
+		this.perSide = !!e.perSide;
 		this.#saved = fieldsOf(e);
 		// A sync writes out unsaved typing first; the editor leaves the list with its component.
 		$effect(() => registerEditor(this.flush));
@@ -93,8 +113,9 @@ export class LogEditor {
 		this.#saveTimer = undefined;
 		const mine = fieldsOf({
 			title: this.title,
-			workoutsString: this.workoutsString,
+			workoutsString: this.stored,
 			note: this.note,
+			perSide: this.perSide,
 		});
 		if (sameFields(mine, this.#saved)) return;
 
@@ -106,8 +127,9 @@ export class LogEditor {
 			const [merged] = mergeExercises([{ id, ...this.#saved }], [{ id, ...mine }], [stored]).merged;
 			next = merged ? fieldsOf(merged) : mine;
 			this.title = next.title;
-			this.workoutsString = next.workoutsString;
+			this.workoutsString = toTyped(next.workoutsString);
 			this.note = next.note ?? "";
+			this.perSide = !!next.perSide;
 		}
 		this.#saved = next;
 		await saveExercise({ ...exercise, ...next });
@@ -157,6 +179,24 @@ export class LogEditor {
 		await this.#placeCaret(start + insertText.length);
 	};
 
+	/**
+	 * The keypad's ± key: starts a "+" (weight added to bodyweight); pressed again right after,
+	 * it turns into "-" (assistance) and back.
+	 */
+	toggleSign = async () => {
+		const { start, end } = this.#caret();
+		const before = this.workoutsString[start - 1];
+		if (start === end && (before === "+" || before === "-")) {
+			const flipped = before === "+" ? "-" : "+";
+			this.workoutsString =
+				this.workoutsString.slice(0, start - 1) + flipped + this.workoutsString.slice(end);
+			this.saveSoon();
+			await this.#placeCaret(start);
+			return;
+		}
+		await this.insert("+", true);
+	};
+
 	backspace = async () => {
 		let { start, end } = this.#caret();
 		if (start === end) start = Math.max(0, start - 1);
@@ -179,7 +219,9 @@ export class LogEditor {
 	onKey = (key: KeypadKey) => {
 		if (key === "back") this.backspace();
 		else if (key === "today") this.addToday();
-		else if (key === "a" || key === "d") this.insert(key, true);
+		else if (key === "sign") this.toggleSign();
+		else if (key === "a") this.insert(this.letters.warmup, true);
+		else if (key === "d") this.insert(this.letters.drop, true);
 		else if (key === "space") this.insert(" ");
 		else if (key === "enter") this.insert("\n");
 		else this.insert(key);

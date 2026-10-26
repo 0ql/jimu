@@ -2,10 +2,10 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { eq } from "drizzle-orm";
 import * as z from "zod/v4";
 import { db } from "#lib/server/db/index.js";
-import { exercises, routines, splits } from "#lib/server/db/schema.js";
+import { exercises, routines, splits, users } from "#lib/server/db/schema.js";
 import { changeStores } from "#lib/server/syncStore.js";
 import { newId } from "#lib/merge.js";
-import { datedLines, formatKg, formatWeight, lineStats, parseLine } from "#lib/sets.js";
+import { datedLines, formatKg, formatSet, lineStats, parseLine } from "#lib/sets.js";
 import {
 	WEEKDAYS,
 	isoDate,
@@ -24,17 +24,27 @@ import {
  * devices merge the changes in like an edit from another device. Nothing here deletes.
  */
 
-type Exercise = { id: number; title: string; workoutsString: string; note?: string };
+type Exercise = {
+	id: number;
+	title: string;
+	workoutsString: string;
+	note?: string;
+	perSide?: boolean;
+};
 type Routine = { id: number; name: string; exerciseIds: number[]; trainedOn?: string[] };
 
 const INSTRUCTIONS = `jimu is a strength-training log. Each exercise has a log with one line per training day:
 a date (dd.mm., sometimes dd.mm.yy) followed by sets written as weight×reps, e.g.
 "24.10. a10x12 30x10 x8 x7 d15x7":
-- "30x10" is a working set: 30 kg for 10 reps
-- "x8" without a weight repeats the previous weight (here 30 kg × 8)
+- "30x10" is a working set: 30 (kg or lb, the tools say which) for 10 reps
+- "x8" without a weight repeats the previous weight (here 30 × 8)
 - "a" marks a warm-up set (not counted in volume), "d" a drop set
-- a set with no weight at all is bodyweight
-Volume is the sum of weight × reps over working and drop sets. The tools give full dates (YYYY-MM-DD).
+- a set with no weight at all is bodyweight; "+10x8" is bodyweight plus 10 added (a dip belt),
+  "-20x8" bodyweight with 20 of assistance (machine pull-ups)
+- "20x12/11" gives each side its reps (one arm or leg at a time): 12 on the first side, 11 on the second
+Volume is the sum of weight × reps over working and drop sets; bodyweight sets count only added
+weight. Exercises marked "per side" are logged for one side and their volume counts both. The tools
+give full dates (YYYY-MM-DD).
 Routines group exercises trained together; splits put routines on a schedule (a rotation every few days
 or on set gym days, or a fixed routine per weekday).
 If the write tools are available, they create and change exercises, routines and splits and log sets,
@@ -76,10 +86,13 @@ const loadData = async (uuid: string) => {
 		.select({ json: splits.splitsJsn })
 		.from(splits)
 		.where(eq(splits.uuid, uuid));
+	const [user] = await db.select({ unit: users.unit }).from(users).where(eq(users.uuid, uuid));
 	return {
 		exercises: parseList<Exercise>(ex?.json).filter((e) => typeof e?.workoutsString === "string"),
 		routines: parseList<Routine>(ro?.json),
 		splits: parseList<Split>(sp?.json),
+		/** The account's weight unit, for every number the tools print. */
+		unit: user?.unit === "lb" ? "lb" : "kg",
 	};
 };
 
@@ -92,12 +105,12 @@ const iso = (d: Date) =>
 const days = (exercise: Exercise) =>
 	datedLines(exercise.workoutsString).map(({ date, line }) => {
 		const { rest, sets } = parseLine(line);
-		const { volume, top } = lineStats(sets);
+		const { volume, top } = lineStats(sets, exercise.perSide);
 		return {
 			date,
 			rest,
 			volume,
-			top: top ? `${formatWeight(top.weight)}×${top.reps}` : null,
+			top: top ? formatSet(top) : null,
 		};
 	});
 
@@ -325,7 +338,7 @@ export const buildServer = (userUuid: string, canWrite = false) => {
 				const all = days(e);
 				const last = all.at(-1);
 				return {
-					line: `${e.title} | ${e.note?.trim() || "—"} | ${all.length} | ${last ? `${iso(last.date)} | ${last.rest}` : "never | —"}`,
+					line: `${e.title}${e.perSide ? " (per side)" : ""} | ${e.note?.trim() || "—"} | ${all.length} | ${last ? `${iso(last.date)} | ${last.rest}` : "never | —"}`,
 					time: last?.date.getTime() ?? 0,
 				};
 			});
@@ -356,10 +369,10 @@ export const buildServer = (userUuid: string, canWrite = false) => {
 				);
 			const e = found.exercise;
 			const all = days(e);
-			const header = `${e.title}${e.note?.trim() ? ` (machine setup: ${e.note.trim()})` : ""}: ${all.length} sessions`;
+			const header = `${e.title}${e.note?.trim() ? ` (machine setup: ${e.note.trim()})` : ""}${e.perSide ? " (per side: one side logged, volume counts both)" : ""}: ${all.length} sessions, weights in ${data.unit}`;
 			const lines = all.map(
 				(d) =>
-					`${iso(d.date)}  ${d.rest || "(no sets)"}  · volume ${formatKg(d.volume)} kg${d.top ? ` · top ${d.top}` : ""}`,
+					`${iso(d.date)}  ${d.rest || "(no sets)"}  · volume ${formatKg(d.volume)} ${data.unit}${d.top ? ` · top ${d.top}` : ""}`,
 			);
 			return text([header, "", ...lines].join("\n"));
 		},
@@ -404,7 +417,7 @@ export const buildServer = (userUuid: string, canWrite = false) => {
 				const entries = byDay.get(key)!.sort((a, b) => a.title.localeCompare(b.title));
 				const volume = entries.reduce((sum, x) => sum + x.volume, 0);
 				return [
-					`${key}: ${entries.length} exercise${entries.length === 1 ? "" : "s"}, volume ${formatKg(volume)} kg`,
+					`${key}: ${entries.length} exercise${entries.length === 1 ? "" : "s"}, volume ${formatKg(volume)} ${data.unit}`,
 					...entries.map((x) => `  ${x.title}: ${x.rest || "(no sets)"}`),
 				].join("\n");
 			});
@@ -501,14 +514,18 @@ export const buildServer = (userUuid: string, canWrite = false) => {
 		{
 			title: "Create an exercise",
 			description:
-				"Adds a new exercise with an empty log. Optionally its machine setup (e.g. 'Sitz 3, Rolle 2').",
+				"Adds a new exercise with an empty log. Optionally its machine setup (e.g. 'Sitz 3, Rolle 2') and whether it is trained one side at a time.",
 			inputSchema: z.object({
 				name: z.string().min(1).max(80).describe("Exercise name"),
 				setup: z.string().max(120).optional().describe("Machine setup"),
+				per_side: z
+					.boolean()
+					.optional()
+					.describe("Trained one arm or leg at a time: one side is logged, volume counts both"),
 			}),
 			annotations: creates,
 		},
-		async ({ name, setup }) =>
+		async ({ name, setup, per_side }) =>
 			change(["exercises"], ({ exercises }) => {
 				nameTaken(exercises, name, (e) => e.title, "exercise");
 				exercises.push({
@@ -516,6 +533,7 @@ export const buildServer = (userUuid: string, canWrite = false) => {
 					title: name.trim(),
 					workoutsString: "",
 					...(setup?.trim() ? { note: setup.trim() } : {}),
+					...(per_side ? { perSide: true } : {}),
 				});
 				return `Created the exercise "${name.trim()}".`;
 			}),
@@ -526,15 +544,19 @@ export const buildServer = (userUuid: string, canWrite = false) => {
 		{
 			title: "Rename an exercise or change its setup",
 			description:
-				"Changes an exercise's name and/or machine setup (an empty setup clears it). The log is not touched; add sets with log_sets.",
+				"Changes an exercise's name, machine setup (an empty setup clears it) and/or whether it is trained per side. The log is not touched; add sets with log_sets.",
 			inputSchema: z.object({
 				exercise: z.string().describe("Current exercise name"),
 				name: z.string().min(1).max(80).optional().describe("New name"),
 				setup: z.string().max(120).optional().describe("New machine setup"),
+				per_side: z
+					.boolean()
+					.optional()
+					.describe("Trained one arm or leg at a time: one side is logged, volume counts both"),
 			}),
 			annotations: updates,
 		},
-		async ({ exercise, name, setup }) =>
+		async ({ exercise, name, setup, per_side }) =>
 			change(["exercises"], ({ exercises }) => {
 				const e = exerciseNamed(exercises, exercise);
 				if (name && norm(name) !== norm(e.title)) {
@@ -545,7 +567,11 @@ export const buildServer = (userUuid: string, canWrite = false) => {
 					if (setup.trim()) e.note = setup.trim();
 					else delete e.note;
 				}
-				return `Updated "${e.title}"${e.note ? ` (setup: ${e.note})` : ""}.`;
+				if (per_side !== undefined) {
+					if (per_side) e.perSide = true;
+					else delete e.perSide;
+				}
+				return `Updated "${e.title}"${e.note ? ` (setup: ${e.note})` : ""}${e.perSide ? " (per side)" : ""}.`;
 			}),
 	);
 

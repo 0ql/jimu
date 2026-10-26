@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { unit } from "#lib/unit.js";
 	import { tick, type Snippet } from "svelte";
 	import { type Exercise, routines } from "./idb";
-	import { formatKg, formatWeight, lineStats } from "#lib/sets.js";
+	import { formatKg, formatSet, lineStats } from "#lib/sets.js";
 	import { historyDate, LogEditor } from "./logEditor.svelte";
 
 	import SetChips from "#lib/ui/SetChips.svelte";
@@ -75,6 +76,10 @@
 					<span class="font-mono text-[13px] text-soft truncate">{editor.note.trim()}</span>
 					<span class="text-ghost" aria-hidden="true">·</span>
 				{/if}
+				{#if editor.perSide}
+					<span class="text-[13px] text-soft shrink-0">per side</span>
+					<span class="text-ghost" aria-hidden="true">·</span>
+				{/if}
 				{#each tags as tag (tag.id)}
 					<span
 						class="h-6 shrink-0 px-2.5 rounded-full border-solid border-1 border-edge text-xs font-semibold text-soft flex items-center"
@@ -111,7 +116,9 @@
 				<label for="desk-log-{exercise.id}" class="text-[13px] text-subtle"
 					>Log · one line per day</label
 				>
-				<span class="font-mono text-xs text-dim">a warm-up · d drop set · x8 same kg</span>
+				<span class="font-mono text-xs text-dim"
+					>{editor.letters.warmup} warm-up · {editor.letters.drop} drop set · x8 same weight</span
+				>
 			</div>
 			<textarea
 				id="desk-log-{exercise.id}"
@@ -124,7 +131,7 @@
 				spellcheck="false"
 				autocomplete="off"
 				inputmode={editor.inputmode}
-				placeholder="{editor.stamp} a10x12 30x10 x8 x7 d15x7"
+				placeholder={editor.placeholder}
 				class="w-full min-h-[6lh] max-h-[16lh] overflow-y-auto resize-y rounded-[10px] border-solid border-[1.5px] border-signal-ink bg-bg px-3.5 py-3 font-mono text-base leading-[1.7] outline-none placeholder:text-placeholder"
 			></textarea>
 			{@render notice?.()}
@@ -150,20 +157,18 @@
 			<div class="grid grid-cols-[repeat(auto-fit,minmax(124px,1fr))] gap-2.5">
 				<div class={statClass}>
 					<span class="text-xs text-subtle">Volume</span>
-					<span class={statValue}>{formatKg(editor.stats.volume)} kg</span>
+					<span class={statValue}>{formatKg(editor.stats.volume)} {unit()}</span>
 				</div>
 				<div class={statClass}>
 					<span class="text-xs text-subtle">Top set</span>
 					<span class={statValue}>
-						{editor.stats.top
-							? `${formatWeight(editor.stats.top.weight)}×${editor.stats.top.reps}`
-							: "—"}
+						{editor.stats.top ? formatSet(editor.stats.top) : "—"}
 					</span>
 				</div>
 				<div class={statClass}>
 					<span class="text-xs text-subtle">Sets</span>
 					<span class={statValue}>
-						{counts.work}{counts.drop ? ` + ${counts.drop}d` : ""}
+						{counts.work}{counts.drop ? ` + ${counts.drop}${editor.letters.drop}` : ""}
 					</span>
 				</div>
 				<div class={statClass}>
@@ -190,7 +195,7 @@
 			>
 				<div class="flex flex-wrap justify-between items-baseline gap-x-3 gap-y-0.5">
 					<h2 class="m-0 text-[15px] font-semibold">Volume per session</h2>
-					<span class="text-xs text-subtle">kg · warm-ups excluded</span>
+					<span class="text-xs text-subtle">{unit()} · warm-ups excluded</span>
 				</div>
 				{#if bars.length === 0}
 					<p class="text-sm text-subtle">No sessions yet.</p>
@@ -198,7 +203,7 @@
 					<div
 						role="img"
 						aria-label="Volume over the last {bars.length} sessions: {bars
-							.map((b) => `${b.date} ${formatKg(b.volume)} kg`)
+							.map((b) => `${b.date} ${formatKg(b.volume)} ${unit()}`)
 							.join(', ')}"
 						class="h-[150px] flex items-end gap-2"
 					>
@@ -232,7 +237,8 @@
 						<span class="flex-1 min-w-0 font-mono text-[13px] text-soft truncate">{entry.rest}</span
 						>
 						<span class="font-mono text-xs text-subtle shrink-0">
-							{formatKg(lineStats(entry.sets).volume)} kg
+							{formatKg(lineStats(entry.sets, editor.perSide).volume)}
+							{unit()}
 						</span>
 					</div>
 				{:else}
@@ -248,6 +254,7 @@
 		title={editor.title}
 		todayLabel={editor.stamp}
 		todayDone={editor.isToday}
+		letters={editor.letters}
 		onkey={editor.onKey}
 		onabc={() => editor.useSystemKeyboard(true)}
 		ondone={editor.closePad}

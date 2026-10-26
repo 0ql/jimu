@@ -67,6 +67,23 @@
 			/>
 		</div>
 
+		<label
+			class="flex items-center gap-3 px-3.5 py-3 rounded-xl border-solid border-1 border-edge cursor-pointer"
+		>
+			<span class="flex-1 min-w-0 flex flex-col gap-0.5">
+				<span class="text-[15px] font-semibold">Per side</span>
+				<span class="text-xs text-subtle"
+					>One arm or leg at a time: log one side, the volume counts both</span
+				>
+			</span>
+			<input
+				type="checkbox"
+				bind:checked={editor.perSide}
+				onchange={editor.save}
+				class="m-0 size-5 shrink-0 accent-signal-ink cursor-pointer"
+			/>
+		</label>
+
 		{#if $routines.length > 0}
 			<fieldset class="m-0 p-0 border-none flex flex-col gap-2">
 				<legend class="text-xs text-subtle p-0 mb-2">In routines</legend>

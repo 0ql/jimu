@@ -16,7 +16,7 @@ export type Session = { date: Date; key: string; entries: SessionEntry[]; volume
 
 /** Newest first; each exercise once per day, alphabetically. */
 export const parseSessions = (
-	all: { id?: number; title: string; workoutsString: string }[],
+	all: { id?: number; title: string; workoutsString: string; perSide?: boolean }[],
 	now = new Date(),
 ): Session[] => {
 	const map = new Map<string, Session>();
@@ -27,7 +27,7 @@ export const parseSessions = (
 			const key = isoDate(date);
 			if (!map.has(key)) map.set(key, { date, key, entries: [], volume: 0 });
 			const session = map.get(key)!;
-			const volume = lineStats(sets).volume;
+			const volume = lineStats(sets, exercise.perSide).volume;
 			// Show the sets as typed (x8 stays x8), colored by kind.
 			const tokens = rest
 				.split(/\s+/)

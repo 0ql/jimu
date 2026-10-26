@@ -39,14 +39,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (isTokenRoute(url.pathname)) {
-		event.locals.user = { uuid: "", isAdmin: false };
+		event.locals.user = { uuid: "", isAdmin: false, unit: "kg" };
 		return resolve(event);
 	}
 
 	const sessionId = event.cookies.get("session");
 	const session = sessionId ? await validateSession(sessionId) : null;
 
-	event.locals.user = { uuid: session?.userUuid ?? "", isAdmin: session?.isAdmin ?? false };
+	event.locals.user = {
+		uuid: session?.userUuid ?? "",
+		isAdmin: session?.isAdmin ?? false,
+		unit: session?.unit === "lb" ? "lb" : "kg",
+	};
 
 	if (!event.locals.user?.uuid && !publicRoutes.includes(url.pathname)) {
 		// Connecting an app starts signed out more often than not: come back here after login.

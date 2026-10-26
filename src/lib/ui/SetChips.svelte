@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatWeight, type ParsedSet } from "#lib/sets.js";
+	import { formatSet, type ParsedSet } from "#lib/sets.js";
 
 	let { sets, large = false }: { sets: ParsedSet[]; large?: boolean } = $props();
 
@@ -11,8 +11,7 @@
 				: s.kind === "drop"
 					? "drop"
 					: `set ${s.n}`;
-	const value = (s: ParsedSet) =>
-		s.kind === "invalid" ? s.token : `${formatWeight(s.weight)}×${s.reps}`;
+	const value = (s: ParsedSet) => (s.kind === "invalid" ? s.token : formatSet(s));
 	const kindClass: Record<ParsedSet["kind"], string> = {
 		warmup: "border-dashed border-ghost text-subtle",
 		work: "border-solid border-edge-2 bg-surface-3 text-fg",

@@ -1,8 +1,18 @@
 <script lang="ts">
+	import { unit } from "#lib/unit.js";
 	import { onMount } from "svelte";
 	import { page } from "$app/state";
 	import { exercises, loadExercises, type Exercise } from "../idb";
-	import { datedLines, formatKg, formatWeight, parseLine, type ParsedSet } from "#lib/sets.js";
+	import {
+		datedLines,
+		formatKg,
+		formatWeight,
+		parseLine,
+		setLoad,
+		totalReps,
+		weakerReps,
+		type ParsedSet,
+	} from "#lib/sets.js";
 	import Nav from "../Nav.svelte";
 	import ProgressChart from "./ProgressChart.svelte";
 	import SearchBar from "../SearchBar.svelte";
@@ -14,14 +24,16 @@
 		tokens: { text: string; kind: ParsedSet["kind"] }[];
 		volume: number;
 		top: number | null;
+		/** The top set is relative to bodyweight (BW+10, BW−20). */
+		topBodyweight: boolean;
 		e1rm: number | null;
 		reps: number;
 	};
 
 	const METRICS: { id: Metric; label: string; hint: string }[] = [
-		{ id: "volume", label: "Volume", hint: "kg · weight × reps of working and drop sets" },
-		{ id: "top", label: "Top weight", hint: "kg · heaviest working set" },
-		{ id: "e1rm", label: "Est. 1RM", hint: "kg · best working set, Epley formula" },
+		{ id: "volume", label: "Volume", hint: "weight × reps of working and drop sets" },
+		{ id: "top", label: "Top weight", hint: "heaviest working set" },
+		{ id: "e1rm", label: "Est. 1RM", hint: "best working set, Epley formula" },
 		{ id: "reps", label: "Reps", hint: "reps · working and drop sets" },
 	];
 	const RANGES: { id: Range; label: string; days: number | null }[] = [
@@ -61,18 +73,24 @@
 				tokens: [],
 				volume: 0,
 				top: null,
+				topBodyweight: false,
 				e1rm: null,
 				reps: 0,
 			};
 			s.tokens.push(...tokens);
 			for (const set of sets) {
 				if (set.kind === "invalid" || set.kind === "warmup") continue;
-				s.reps += set.reps;
-				if (set.weight === null) continue;
-				s.volume += set.weight * set.reps;
-				if (set.kind !== "work") continue;
-				s.top = Math.max(s.top ?? 0, set.weight);
-				s.e1rm = Math.max(s.e1rm ?? 0, set.weight * (1 + set.reps / 30));
+				s.reps += totalReps(set, exercise.perSide);
+				s.volume += setLoad(set) * totalReps(set, exercise.perSide);
+				if (set.weight === null || set.kind !== "work") continue;
+				// Bodyweight sets: the top is the most added weight (or the least assistance); an
+				// estimated 1RM needs the body's weight, so they have none.
+				if (s.top === null || set.weight > s.top) {
+					s.top = set.weight;
+					s.topBodyweight = set.bodyweight;
+				}
+				if (!set.bodyweight)
+					s.e1rm = Math.max(s.e1rm ?? 0, set.weight * (1 + weakerReps(set) / 30));
 			}
 			byDay.set(date.getTime(), s);
 		}
@@ -135,8 +153,8 @@
 		metric === "reps"
 			? formatKg(n)
 			: n >= 1000
-				? `${formatKg(n)} kg`
-				: `${formatWeight(Math.round(n * 10) / 10)} kg`;
+				? `${formatKg(n)} ${unit()}`
+				: `${formatWeight(Math.round(n * 10) / 10)} ${unit()}`;
 
 	const points = $derived(
 		inRange
@@ -349,7 +367,10 @@
 					<h2 class="m-0 text-[15px] font-semibold">
 						{METRICS.find((m) => m.id === metric)!.label} per session
 					</h2>
-					<span class="text-xs text-subtle">{METRICS.find((m) => m.id === metric)!.hint}</span>
+					<span class="text-xs text-subtle"
+						>{metric === "reps" ? "" : `${unit()} · `}{METRICS.find((m) => m.id === metric)!
+							.hint}</span
+					>
 				</div>
 				{#if points.length}
 					<ProgressChart {points} label={METRICS.find((m) => m.id === metric)!.label} {format} />
@@ -392,7 +413,7 @@
 										</td>
 										<td class="px-3 py-2.5 text-right whitespace-nowrap">{formatKg(s.volume)}</td>
 										<td class="px-3 py-2.5 text-right whitespace-nowrap"
-											>{s.top === null ? "—" : formatWeight(s.top)}</td
+											>{s.top === null ? "—" : formatWeight(s.top, s.topBodyweight)}</td
 										>
 										<td class="px-4 sm:px-5 py-2.5 text-right whitespace-nowrap"
 											>{s.e1rm === null ? "—" : formatWeight(Math.round(s.e1rm * 10) / 10)}</td

@@ -1,7 +1,19 @@
 export type SetKind = "warmup" | "work" | "drop";
 
+/**
+ * A set. `weight` is null for plain bodyweight. With `bodyweight` true the weight is relative to
+ * the body: +10 added (dips with a belt), −20 assisted (machine pull-ups); "+10x8" and "-20x8".
+ * `reps2` is the second side's reps when the sides differ: "20x12/11" (first side first).
+ */
 export type ParsedSet =
-	| { kind: SetKind; weight: number | null; reps: number; n: number }
+	| {
+			kind: SetKind;
+			weight: number | null;
+			bodyweight: boolean;
+			reps: number;
+			reps2?: number;
+			n: number;
+	  }
 	| { kind: "invalid"; token: string };
 
 export type ParsedLine = {
@@ -17,7 +29,7 @@ export type ParsedLine = {
 // at a dot, space or line end, so "18.10.30x10" stays a date followed by a set.
 const DATE_RE = /^\s*(\d{1,2})\.(\d{1,2})\.(?:(\d{4}|\d{2})(?=[.\s]|$)\.?)?/;
 const fullYear = (raw: string) => (raw.length === 2 ? 2000 + parseInt(raw) : parseInt(raw));
-const SET_RE = /^([adAD])?(\d+(?:[.,]\d+)?)?[xX×](\d+)$/;
+const SET_RE = /^([adAD])?([+-])?(\d+(?:[.,]\d+)?)?[xX×](\d+)(?:\/(\d+))?$/;
 
 /** "18.10." for the given day, in the same format the log lines use. */
 export const dateStamp = (d = new Date()) =>
@@ -25,7 +37,9 @@ export const dateStamp = (d = new Date()) =>
 
 /**
  * Parses one log line such as "18.10. a10x12 30x10 x8 x7 d15x7".
- * A set without weight reuses the previous weight; "a" marks a warm-up, "d" a drop set.
+ * A set without weight reuses the previous weight; "a" marks a warm-up, "d" a drop set. A
+ * signed weight is added to or taken off bodyweight ("+10x8", "-20x8"); no weight at all is
+ * plain bodyweight. Two rep counts are one per side, first side first ("20x12/11").
  */
 export const parseLine = (line: string): ParsedLine => {
 	const m = line.match(DATE_RE);
@@ -34,6 +48,7 @@ export const parseLine = (line: string): ParsedLine => {
 	const rest = (m ? line.slice(m[0].length) : line).trim();
 
 	let lastWeight: number | null = null;
+	let lastSigned = false;
 	let n = 0;
 	const sets = rest
 		.split(/\s+/)
@@ -42,9 +57,22 @@ export const parseLine = (line: string): ParsedLine => {
 			const t = token.match(SET_RE);
 			if (!t) return { kind: "invalid", token };
 			const kind: SetKind = t[1]?.toLowerCase() === "a" ? "warmup" : t[1] ? "drop" : "work";
-			if (t[2] !== undefined) lastWeight = parseFloat(t[2].replace(",", "."));
+			// A sign without a number ("+x8") isn't a weight.
+			if (t[2] && t[3] === undefined) return { kind: "invalid", token };
+			if (t[3] !== undefined) {
+				const value = parseFloat(t[3].replace(",", "."));
+				lastWeight = t[2] === "-" ? -value : value;
+				lastSigned = !!t[2];
+			}
 			if (kind === "work") n++;
-			return { kind, weight: lastWeight, reps: parseInt(t[3]), n };
+			return {
+				kind,
+				weight: lastWeight,
+				bodyweight: lastWeight === null || lastSigned,
+				reps: parseInt(t[4]),
+				...(t[5] !== undefined ? { reps2: parseInt(t[5]) } : {}),
+				n,
+			};
 		});
 
 	return { date, year, rest, sets };
@@ -59,26 +87,70 @@ export const parseLog = (log: string) => {
 	};
 };
 
-/** Volume counts working and drop sets; warm-ups are left out. */
-export const lineStats = (sets: ParsedSet[]) => {
+/**
+ * The weight a set adds to the volume: the weight, or for bodyweight sets only what was added
+ * (assisted and plain bodyweight sets count 0, as jimu doesn't know the body's weight).
+ */
+export const setLoad = (s: { weight: number | null; bodyweight: boolean }) =>
+	s.weight === null ? 0 : s.bodyweight ? Math.max(0, s.weight) : s.weight;
+
+/**
+ * All reps of a set, both sides counted: "20x12/11" is 23; on an exercise trained per side
+ * (one arm or leg at a time) a single count is for each side, so "20x12" is 24.
+ */
+export const totalReps = (s: { reps: number; reps2?: number }, perSide = false) =>
+	s.reps2 !== undefined ? s.reps + s.reps2 : s.reps * (perSide ? 2 : 1);
+
+/** The reps a set proves for progress: with two sides, the weaker one. */
+export const weakerReps = (s: { reps: number; reps2?: number }) =>
+	s.reps2 !== undefined ? Math.min(s.reps, s.reps2) : s.reps;
+
+type TopSet = { weight: number | null; bodyweight: boolean; reps: number; reps2?: number };
+
+/**
+ * Volume counts working and drop sets; warm-ups are left out. Sets on an exercise trained per
+ * side, or written with both sides, count both (see totalReps). The top set is the heaviest
+ * working set, then the most reps on the weaker side; for bodyweight sets more added weight (or
+ * less assistance) is heavier.
+ */
+export const lineStats = (sets: ParsedSet[], perSide = false) => {
 	let volume = 0;
-	let top: { weight: number | null; reps: number } | null = null;
+	let top: TopSet | null = null;
 	for (const s of sets) {
 		if (s.kind === "invalid") continue;
-		if (s.kind !== "warmup" && s.weight !== null) volume += s.weight * s.reps;
+		if (s.kind !== "warmup") volume += setLoad(s) * totalReps(s, perSide);
 		if (
 			s.kind === "work" &&
 			(!top ||
 				(s.weight ?? 0) > (top.weight ?? 0) ||
-				((s.weight ?? 0) === (top.weight ?? 0) && s.reps > top.reps))
+				((s.weight ?? 0) === (top.weight ?? 0) && weakerReps(s) > weakerReps(top)))
 		)
-			top = { weight: s.weight, reps: s.reps };
+			top = {
+				weight: s.weight,
+				bodyweight: s.bodyweight,
+				reps: s.reps,
+				...(s.reps2 !== undefined ? { reps2: s.reps2 } : {}),
+			};
 	}
 	return { volume, top };
 };
 
-export const formatWeight = (w: number | null) =>
-	w === null ? "BW" : String(Math.round(w * 100) / 100).replace(".", ",");
+/** "30", "27,5"; bodyweight as "BW", "BW+10" or "BW−20". */
+export const formatWeight = (w: number | null, bodyweight = false) => {
+	const number = (x: number) => String(Math.round(x * 100) / 100).replace(".", ",");
+	if (w === null || (bodyweight && w === 0)) return "BW";
+	if (bodyweight) return `BW${w > 0 ? "+" : "−"}${number(Math.abs(w))}`;
+	return number(w);
+};
+
+/** A set as "30×10", "BW×12", "BW+10×8" or, per side, "20×12/11". */
+export const formatSet = (s: {
+	weight: number | null;
+	bodyweight: boolean;
+	reps: number;
+	reps2?: number;
+}) =>
+	`${formatWeight(s.weight, s.bodyweight)}×${s.reps}${s.reps2 !== undefined ? `/${s.reps2}` : ""}`;
 
 export const formatKg = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
@@ -136,4 +208,36 @@ export const datedLines = (log: string, now = new Date()) => {
 		out.push({ date: new Date(year, month - 1, day), line });
 	}
 	return out.reverse();
+};
+
+/**
+ * The letters that mark warm-up and drop sets. Logs are always stored with "a" and "d"; someone
+ * who prefers other letters types and reads theirs, translated with swapLetters at the edges, so
+ * sync, merging, other devices and the connector keep seeing the same data.
+ */
+export type SetLetters = { warmup: string; drop: string };
+export const DEFAULT_LETTERS: SetLetters = { warmup: "a", drop: "d" };
+
+/** A letter that can mark a set: one letter that isn't "x" (which separates weight and reps). */
+export const validLetter = (letter: string) => /^[a-wyz]$/i.test(letter);
+
+const PREFIXED_SET = /^([a-z])([+-]?(?:\d+(?:[.,]\d+)?)?[xX×]\d+(?:\/\d+)?)$/i;
+
+/**
+ * Rewrites the warm-up and drop prefixes in a log from one pair of letters to the other, e.g.
+ * "a10x12 30x10 d15x7" to "w10x12 30x10 s15x7". Everything else, spacing included, is kept.
+ */
+export const swapLetters = (log: string, from: SetLetters, to: SetLetters) => {
+	if (from.warmup === to.warmup && from.drop === to.drop) return log;
+	return log
+		.split(/(\s+)/)
+		.map((token) => {
+			const m = token.match(PREFIXED_SET);
+			if (!m) return token;
+			const letter = m[1].toLowerCase();
+			const next = letter === from.warmup ? to.warmup : letter === from.drop ? to.drop : null;
+			if (next === null) return token;
+			return (m[1] === letter ? next : next.toUpperCase()) + m[2];
+		})
+		.join("");
 };

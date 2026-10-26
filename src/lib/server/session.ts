@@ -23,6 +23,7 @@ export const validateSession = async (sessionId: string) => {
 			userUuid: loginSessions.userUuid,
 			expiresAt: loginSessions.expiresAt,
 			isAdmin: users.isAdmin,
+			unit: users.unit,
 		})
 		.from(loginSessions)
 		.innerJoin(users, eq(users.uuid, loginSessions.userUuid))

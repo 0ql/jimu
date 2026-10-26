@@ -10,7 +10,7 @@
 		type Routine,
 		type Split,
 	} from "../idb";
-	import { daysSince, isTodayLine, formatWeight, lineStats, parseLog } from "#lib/sets.js";
+	import { daysSince, formatSet, isTodayLine, lineStats, parseLog } from "#lib/sets.js";
 	import { isoDate, members, splitStatus, trainedDates } from "#lib/splits.js";
 	import { routineBadges } from "#lib/routineBadges.js";
 	import Nav from "../Nav.svelte";
@@ -88,7 +88,7 @@
 						title: e.title,
 						done: isTodayLine(current) && current.sets.length > 0,
 						days: daysSince(current.date, current.year),
-						top: top ? `${formatWeight(top.weight)}×${top.reps}` : "",
+						top: top ? formatSet(top) : "",
 					};
 				});
 			const known = items.map((i) => i.days).filter((d) => d !== null);

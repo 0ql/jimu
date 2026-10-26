@@ -14,7 +14,13 @@
 import { datedLines, parseLine } from "./sets";
 import type { Split } from "./splits";
 
-export type MergeExercise = { id?: number; title: string; workoutsString: string; note?: string };
+export type MergeExercise = {
+	id?: number;
+	title: string;
+	workoutsString: string;
+	note?: string;
+	perSide?: boolean;
+};
 export type MergeRoutine = {
 	id?: number;
 	name: string;
@@ -162,7 +168,10 @@ const mergeById = <T extends { id?: number }>(
 };
 
 const sameExercise = (x: MergeExercise, y: MergeExercise) =>
-	x.title === y.title && x.workoutsString === y.workoutsString && (x.note ?? "") === (y.note ?? "");
+	x.title === y.title &&
+	x.workoutsString === y.workoutsString &&
+	(x.note ?? "") === (y.note ?? "") &&
+	!!x.perSide === !!y.perSide;
 
 /** Merges exercise lists; `conflicts` names the exercises where both sides logged the same day. */
 export const mergeExercises = <T extends MergeExercise>(
@@ -182,9 +191,12 @@ export const mergeExercises = <T extends MergeExercise>(
 		const title = pick(b?.title, l.title, s.title);
 		if (conflict) conflicts.push(title);
 		const note = pick(b?.note, l.note, s.note);
+		const perSide = pick(!!b?.perSide, !!l.perSide, !!s.perSide);
 		const result: T = { ...l, title, workoutsString: log };
 		if (note) result.note = note;
 		else delete result.note;
+		if (perSide) result.perSide = true;
+		else delete result.perSide;
 		return result;
 	});
 	return { merged, conflicts };

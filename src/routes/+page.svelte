@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { unit } from "#lib/unit.js";
 	import { onMount } from "svelte";
 	import {
 		exercises,
@@ -9,7 +10,7 @@
 		splits,
 		type Split,
 	} from "./idb";
-	import { formatKg, formatWeight, lineStats, parseLog } from "#lib/sets.js";
+	import { formatKg, formatSet, lineStats, parseLog } from "#lib/sets.js";
 	import {
 		WEEKDAYS,
 		addDays,
@@ -82,7 +83,7 @@
 				return {
 					id: e.id!,
 					title: e.title,
-					top: top ? `${formatWeight(top.weight)}×${top.reps}` : "",
+					top: top ? formatSet(top) : "",
 				};
 			});
 	});
@@ -305,7 +306,7 @@
 			<div class="{stat} flex">
 				<span class="text-xs text-subtle">Avg volume</span>
 				<span class={statValue}
-					>{formatKg(stats.avgVolume)}<span class="text-sm text-subtle">&nbsp;kg</span></span
+					>{formatKg(stats.avgVolume)}<span class="text-sm text-subtle">&nbsp;{unit()}</span></span
 				>
 			</div>
 			<div class="{stat} hidden lg:flex">
@@ -353,7 +354,7 @@
 									>{session.entries.length} exercise{session.entries.length === 1 ? "" : "s"}</span
 								>
 								<span class="ml-auto font-mono text-[12.5px] text-soft"
-									>{formatKg(session.volume)} kg</span
+									>{formatKg(session.volume)} {unit()}</span
 								>
 							</a>
 						</li>

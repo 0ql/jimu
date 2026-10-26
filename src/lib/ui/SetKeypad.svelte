@@ -12,8 +12,10 @@
 		| "9"
 		| "."
 		| "x"
+		| "/"
 		| "a"
 		| "d"
+		| "sign"
 		| "space"
 		| "back"
 		| "enter"
@@ -30,6 +32,7 @@
 		title = "",
 		todayLabel,
 		todayDone = false,
+		letters = { warmup: "a", drop: "d" },
 		onkey,
 		onabc,
 		ondone,
@@ -37,6 +40,8 @@
 		title?: string;
 		todayLabel: string;
 		todayDone?: boolean;
+		/** The letters shown on the warm-up and drop keys (the keys still send "a" and "d"). */
+		letters?: { warmup: string; drop: string };
 		onkey: (key: KeypadKey) => void;
 		onabc: () => void;
 		ondone: () => void;
@@ -150,11 +155,11 @@
 	style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom))"
 >
 	<!--
-		[ 1 ][ 2 ][ 3 ][ backspace  ]
+		[ 1 ][ 2 ][ 3 ][ ± ][ ⌫  ]
 		[ 4 ][ 5 ][ 6 ][ a  ][ d    ]
 		[ 7 ][ 8 ][ 9 ][ x  ][ abc  ]
 		[ . ][ 0 ][ ↵ ][ today      ]
-		[    space    ][ Done       ]
+		[  space  ][ / ][ Done      ]
 		Placed in this order; auto-placement fills the five rows.
 	-->
 	<div
@@ -164,6 +169,12 @@
 		{#each ["1", "2", "3"] as const as k}
 			<button onmousedown={keepFocus} {...press(k)} class={digit}>{k}</button>
 		{/each}
+		<button
+			onmousedown={keepFocus}
+			{...press("sign")}
+			aria-label="Plus or minus: weight added to or taken off bodyweight"
+			class="{symbol} font-mono text-[20px] text-soft">±</button
+		>
 		<button
 			onpointerdown={startBack}
 			onpointerup={stopBack}
@@ -175,7 +186,7 @@
 				onkey("back");
 			}}
 			aria-label="Backspace"
-			class="{symbol} col-span-2"
+			class={symbol}
 		>
 			<i class="i-tabler-backspace block size-6 text-soft"></i>
 		</button>
@@ -188,14 +199,14 @@
 			{...press("a")}
 			aria-label="Warm-up set"
 			class="{key} bg-transparent border-dashed border-1 border-ghost font-mono text-[20px] text-soft"
-			>a</button
+			>{letters.warmup}</button
 		>
 		<button
 			onmousedown={keepFocus}
 			{...press("d")}
 			aria-label="Drop set"
 			class="{key} bg-drop-bg border-solid border-1 border-drop-border font-mono text-[20px] text-drop"
-			>d</button
+			>{letters.drop}</button
 		>
 
 		{#each ["7", "8", "9"] as const as k}
@@ -231,10 +242,16 @@
 			onmousedown={keepFocus}
 			{...press("space")}
 			aria-label="Space"
-			class="{symbol} col-span-3"
+			class="{symbol} col-span-2"
 		>
 			<i class="i-tabler-space block size-6 text-soft"></i>
 		</button>
+		<button
+			onmousedown={keepFocus}
+			{...press("/")}
+			aria-label="Slash: reps of the second side"
+			class="{symbol} font-mono text-[20px] text-soft">/</button
+		>
 		<button
 			onmousedown={keepFocus}
 			{...lit}

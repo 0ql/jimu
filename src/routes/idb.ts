@@ -15,6 +15,8 @@ export type Exercise = {
 	workoutsString: string;
 	/** Machine setup, e.g. "Sitz 3, Rolle 2". */
 	note?: string;
+	/** Trained one side at a time (one arm or leg): the volume counts both sides. */
+	perSide?: boolean;
 };
 
 export type Routine = {

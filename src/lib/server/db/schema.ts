@@ -7,6 +7,8 @@ export const users = sqliteTable("users", {
 	username: text("username").notNull().unique(),
 	passwordHash: text("passwordHash").notNull(),
 	isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
+	/** The unit weights are written in, "kg" or "lb". Only a label: logs aren't converted. */
+	unit: text("unit").notNull().default("kg"),
 	// Nullable: accounts created before this column existed have no date.
 	createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
 });

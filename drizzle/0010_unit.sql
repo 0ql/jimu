@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `unit` text DEFAULT 'kg' NOT NULL;

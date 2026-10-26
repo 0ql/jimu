@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_LETTERS, swapLetters } from "./sets";
 import { mergeExercises, mergeIds, mergeLog, mergeRoutines, mergeSplits, newId } from "./merge";
 import { newSplit } from "./splits";
 
@@ -258,5 +259,28 @@ describe("newId", () => {
 		expect(a).toBeGreaterThan(1e15);
 		const ids = new Set(Array.from({ length: 200 }, () => newId(1792800000000)));
 		expect(ids.size).toBeGreaterThan(150);
+	});
+});
+
+describe("swapLetters", () => {
+	const custom = { warmup: "w", drop: "s" };
+
+	it("swaps only the warm-up and drop prefixes, keeping everything else", () => {
+		const stored = "24.10. a10x12 30x10  x8 d15x7\n25.10. A20x5 dx6";
+		expect(swapLetters(stored, DEFAULT_LETTERS, custom)).toBe(
+			"24.10. w10x12 30x10  x8 s15x7\n25.10. W20x5 sx6",
+		);
+		expect(swapLetters(swapLetters(stored, DEFAULT_LETTERS, custom), custom, DEFAULT_LETTERS)).toBe(
+			stored,
+		);
+	});
+
+	it("handles letters that trade places", () => {
+		const swapped = { warmup: "d", drop: "a" };
+		expect(swapLetters("a10x12 d15x7", DEFAULT_LETTERS, swapped)).toBe("d10x12 a15x7");
+	});
+
+	it("leaves unfinished or unknown tokens alone", () => {
+		expect(swapLetters("w s10 q10x5 a", custom, DEFAULT_LETTERS)).toBe("w s10 q10x5 a");
 	});
 });

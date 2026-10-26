@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { unit } from "#lib/unit.js";
 	import { onMount, tick } from "svelte";
 	import { exercises, loadExercises, loadRoutines, routines } from "../idb";
 	import { formatKg, type ParsedSet } from "#lib/sets.js";
 	import { parseSessions, type Session } from "#lib/sessions.js";
 	import { trainedDates } from "#lib/splits.js";
 	import { routineBadges } from "#lib/routineBadges.js";
+	import { toTyped } from "#lib/setLetters.js";
 	import RoutineChip from "#lib/ui/RoutineChip.svelte";
 	import Nav from "../Nav.svelte";
 
@@ -120,7 +122,7 @@
 							</div>
 							<div class="flex flex-col items-end shrink-0">
 								<span class="font-display font-semibold text-[18px] leading-none"
-									>{formatKg(session.volume)} kg</span
+									>{formatKg(session.volume)} {unit()}</span
 								>
 								<span class="text-xs text-subtle">
 									{session.entries.length} exercise{session.entries.length === 1 ? "" : "s"}
@@ -140,11 +142,11 @@
 									>
 									<span class="flex-1 min-w-0 font-mono text-[13px] text-soft truncate">
 										{#each entry.tokens as token, i}{#if i}&ensp;{/if}<span
-												class={tokenClass[token.kind]}>{token.text}</span
+												class={tokenClass[token.kind]}>{toTyped(token.text)}</span
 											>{/each}
 									</span>
 									<span class="font-mono text-xs text-subtle shrink-0 ml-auto"
-										>{formatKg(entry.volume)} kg</span
+										>{formatKg(entry.volume)} {unit()}</span
 									>
 								</li>
 							{/each}

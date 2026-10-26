@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { unit } from "#lib/unit.js";
 	import { onDestroy, tick, type Snippet } from "svelte";
 	import { type Exercise } from "./idb";
-	import { formatKg, formatWeight, lineStats } from "#lib/sets.js";
+	import { formatKg, formatSet, lineStats } from "#lib/sets.js";
 	import { historyDate, LogEditor } from "./logEditor.svelte";
 
 	import SetChips from "#lib/ui/SetChips.svelte";
@@ -111,8 +112,12 @@
 			<h1 class="m-0 font-display font-semibold text-[20px] leading-tight truncate">
 				{editor.title}
 			</h1>
-			{#if editor.note.trim()}
-				<span class="font-mono text-xs text-subtle truncate">{editor.note.trim()}</span>
+			{#if editor.note.trim() || editor.perSide}
+				<span class="font-mono text-xs text-subtle truncate"
+					>{[editor.note.trim(), editor.perSide ? "per side" : ""]
+						.filter(Boolean)
+						.join(" · ")}</span
+				>
 			{/if}
 		</div>
 		<a
@@ -149,7 +154,7 @@
 				spellcheck="false"
 				autocomplete="off"
 				inputmode={editor.inputmode}
-				placeholder="{editor.stamp} a10x12 30x10 x8 x7 d15x7"
+				placeholder={editor.placeholder}
 				class="-mx-4 w-[calc(100%+2rem)] min-h-[4lh] max-h-[8lh] overflow-y-auto resize-none border-solid border-x-0 border-t-0 border-b-[1.5px] bg-surface px-4 py-2.5 font-mono text-[15px] leading-[1.65] outline-none placeholder:text-placeholder {showPad
 					? 'border-signal-ink'
 					: 'border-edge focus:border-signal-ink'}"></textarea>
@@ -190,14 +195,12 @@
 			<div class="grid grid-cols-3 gap-2">
 				<div class={statClass}>
 					<span class="text-[11px] text-subtle">Volume</span>
-					<span class={statValue}>{formatKg(editor.stats.volume)} kg</span>
+					<span class={statValue}>{formatKg(editor.stats.volume)} {unit()}</span>
 				</div>
 				<div class={statClass}>
 					<span class="text-[11px] text-subtle">Top set</span>
 					<span class={statValue}>
-						{editor.stats.top
-							? `${formatWeight(editor.stats.top.weight)}×${editor.stats.top.reps}`
-							: "—"}
+						{editor.stats.top ? formatSet(editor.stats.top) : "—"}
 					</span>
 				</div>
 				<div class={statClass}>
@@ -226,7 +229,7 @@
 				<div
 					role="img"
 					aria-label="Volume over the last {bars.length} sessions: {bars
-						.map((b) => `${b.date} ${formatKg(b.volume)} kg`)
+						.map((b) => `${b.date} ${formatKg(b.volume)} ${unit()}`)
 						.join(', ')}"
 					class="h-14 flex items-end gap-1.5"
 				>
@@ -254,7 +257,7 @@
 					<span class="font-mono text-xs text-faint shrink-0 w-[60px]">{historyDate(entry)}</span>
 					<span class="flex-1 min-w-0 font-mono text-[13px] text-soft truncate">{entry.rest}</span>
 					<span class="font-mono text-xs text-subtle shrink-0">
-						{formatKg(lineStats(entry.sets).volume)}
+						{formatKg(lineStats(entry.sets, editor.perSide).volume)}
 					</span>
 				</div>
 			{:else}
@@ -314,6 +317,7 @@
 			title={editor.title}
 			todayLabel={editor.stamp}
 			todayDone={editor.isToday}
+			letters={editor.letters}
 			onkey={editor.onKey}
 			onabc={() => editor.useSystemKeyboard(true)}
 			ondone={editor.closePad}

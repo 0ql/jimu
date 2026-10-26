@@ -8,7 +8,7 @@ import type { PageServerLoad } from "./$types";
 const DAY = 86_400_000;
 const WEEKS = 12;
 
-type Log = { workoutsString?: unknown };
+type Log = { workoutsString?: unknown; perSide?: unknown };
 
 /** Training days (one per user per date), sets and volume from one user's exercise blob. */
 const summarize = (json: string, now: Date) => {
@@ -30,7 +30,7 @@ const summarize = (json: string, now: Date) => {
 			if (!valid.length) continue;
 			days.add(date.getTime());
 			sets += valid.length;
-			volume += lineStats(parsed).volume;
+			volume += lineStats(parsed, !!log.perSide).volume;
 		}
 	}
 	return { exercises: logs.length, days, sets, volume };
