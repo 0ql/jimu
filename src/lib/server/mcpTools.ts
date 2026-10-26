@@ -514,7 +514,7 @@ export const buildServer = (userUuid: string, canWrite = false) => {
 		{
 			title: "Create an exercise",
 			description:
-				"Adds a new exercise with an empty log. Optionally its machine setup (e.g. 'Sitz 3, Rolle 2') and whether it is trained one side at a time.",
+				"Adds a new exercise with an empty log. Optionally its machine setup (e.g. 'Seat 3, pad 2') and whether it is trained one side at a time.",
 			inputSchema: z.object({
 				name: z.string().min(1).max(80).describe("Exercise name"),
 				setup: z.string().max(120).optional().describe("Machine setup"),

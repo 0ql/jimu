@@ -62,7 +62,7 @@
 				autocomplete="off"
 				bind:value={editor.note}
 				onchange={editor.save}
-				placeholder="Sitz 3, Rolle 2"
+				placeholder="Seat 3, pad 2"
 				class="h-[50px] w-full rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 font-mono text-[15px] outline-none focus:border-signal-ink placeholder:text-placeholder"
 			/>
 		</div>

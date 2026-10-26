@@ -13,7 +13,7 @@ export type Exercise = {
 	id?: number;
 	title: string;
 	workoutsString: string;
-	/** Machine setup, e.g. "Sitz 3, Rolle 2". */
+	/** Machine setup, e.g. "Seat 3, pad 2". */
 	note?: string;
 	/** Trained one side at a time (one arm or leg): the volume counts both sides. */
 	perSide?: boolean;

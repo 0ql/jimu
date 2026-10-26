@@ -702,7 +702,7 @@
 						id="import-text"
 						bind:value={importText}
 						spellcheck="false"
-						placeholder={"Bizeps Kabel curl\n14.10. a10x12 27.5x10 x9 x7\n18.10. a10x12 30x10 x8 x7 d15x7\n\nBeinpress liegend\n18.10. a60x15 110x12 x12"}
+						placeholder={"Cable biceps curl\n14.10. a10x12 27.5x10 x9 x7\n18.10. a10x12 30x10 x8 x7 d15x7\n\nLeg press\n18.10. a60x15 110x12 x12"}
 						class="w-full min-h-[9lh] max-h-[24lh] resize-y rounded-xl border-solid border-1 border-edge-2 bg-bg px-3.5 py-3 font-mono text-sm leading-[1.6] outline-none focus:border-signal-ink placeholder:text-placeholder"
 					></textarea>
 					<div class="flex flex-wrap items-center justify-between gap-3">

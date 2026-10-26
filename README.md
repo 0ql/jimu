@@ -2,24 +2,28 @@
 
 # Jimu
 
-A local-first workout log. Everything is stored in the browser (IndexedDB) and works offline; a
-small SvelteKit + SQLite server syncs it between your devices.
+A self-hosted, local-first workout log for the gym. Fast to type into, works offline, and syncs
+between your devices.
 
-- **A log per exercise**, one line per training day, typed like a note:
-  `24.10. a10x12 30x10 x8 x7 d15x7`. On phones a set keypad does the typing.
-- **Home** shows what's due today, the coming week, your stats and a year calendar of training
-  days; tap a day to open that session.
-- **Routines** group exercises you train together. **Splits** put routines on a schedule: a
-  rotation every few days or on set gym days, or a fixed routine per weekday, with a choice of
-  what happens when you miss a day.
-- **Sessions** and **Analytics**: every training day across exercises, and progress charts.
-- **Offline first**: installable as a PWA; edits made offline sync when the connection is back.
-  Two devices editing the same exercise are merged, not overwritten.
-- **Claude and ChatGPT connector**: let an AI assistant read your training and, if you allow it,
-  log sets and create or change exercises, routines and splits (never delete).
-- Night, dark and light themes.
+## Features
 
-### Log syntax
+- Text-based logging: one line per exercise and training day, with a set keypad on phones
+- Warm-up, drop, bodyweight (weighted and assisted) and per-side sets
+- Routines and splits: rotations every few days or on set gym days, or a fixed routine per
+  weekday, with a rule for missed days
+- Home dashboard with what's due today, the week ahead, stats and a calendar of the year
+- Session history and progress charts per exercise (volume, top weight, estimated 1RM, reps)
+- Works offline and installs as an app (PWA); devices sync automatically and changes made on two
+  devices at once are merged, not overwritten
+- Connector for Claude and ChatGPT (MCP): read your training and, if you allow it, log sets and
+  create or change exercises, routines and splits, never delete
+- Several accounts, with an admin overview
+- kg or lb, your own letters for warm-up and drop sets, night, dark and light themes
+- One Docker container with an SQLite database
+
+## Usage
+
+Write one line per exercise and training day, like `24.10. a10x12 30x10 x8 x7 d15x7`:
 
 | Written | Means |
 |---|---|
@@ -33,46 +37,9 @@ small SvelteKit + SQLite server syncs it between your devices.
 | `-20x8` | Bodyweight with 20 of assistance (machine pull-ups); counts 0 in volume |
 | `20x12/11` | One side at a time: 12 reps on the side you start with, 11 on the other |
 
-Weights are in kg or lb, set per account in Settings → Unit; switching only changes the label,
-nothing logged is converted. An exercise trained one arm or leg at a time can be marked "Per
-side" in its edit sheet: a single rep count is then for each side and the volume counts both;
-`20x12/11` writes the sides separately on any exercise.
-
-Prefer other letters for warm-up and drop sets? Set them in Settings → Set letters. Logs are always
-stored with `a` and `d`, so other devices and the connector keep reading them the same way.
-
-## Development
-
-**Prerequisites:** Node.js 22+, pnpm
-
-```bash
-pnpm install
-```
-
-Point the app at a SQLite file (or put the line into `.env`):
-
-```bash
-export DATABASE_URL=./local.db
-```
-
-Create the database and start the dev server:
-
-```bash
-pnpm db:migrate
-pnpm dev
-```
-
-The app runs at `http://localhost:3000` and is reachable on your local network (`--host`). The
-first account you sign up is the admin.
-
-| Command | Description |
-|---|---|
-| `pnpm test` | Unit tests (vitest): sync merge, splits schedule, sessions |
-| `pnpm check` | Type-check with svelte-check |
-| `pnpm format` | Format with Prettier |
-| `pnpm db:generate` | Generate a migration from schema changes |
-| `pnpm db:migrate` | Apply pending migrations |
-| `pnpm db:studio` | Open Drizzle Studio to inspect the database |
+Group exercises into routines and put routines on a schedule with splits (Routines → New). Train
+with a routine selected so the day counts for it. Unit (kg or lb) and the warm-up and drop letters
+are in Settings.
 
 ## Deployment
 
@@ -181,3 +148,36 @@ ingress:
 To go further, allow only the connector's provider to reach that name, e.g. with a Cloudflare WAF
 rule that blocks requests to it from outside Anthropic's
 [published outbound IP range](https://platform.claude.com/docs/en/api/ip-addresses).
+
+## Development
+
+**Prerequisites:** Node.js 22+, pnpm
+
+```bash
+pnpm install
+```
+
+Point the app at a SQLite file (or put the line into `.env`):
+
+```bash
+export DATABASE_URL=./local.db
+```
+
+Create the database and start the dev server:
+
+```bash
+pnpm db:migrate
+pnpm dev
+```
+
+The app runs at `http://localhost:3000` and is reachable on your local network (`--host`). The
+first account you sign up is the admin.
+
+| Command | Description |
+|---|---|
+| `pnpm test` | Unit tests (vitest): sync merge, splits schedule, sessions |
+| `pnpm check` | Type-check with svelte-check |
+| `pnpm format` | Format with Prettier |
+| `pnpm db:generate` | Generate a migration from schema changes |
+| `pnpm db:migrate` | Apply pending migrations |
+| `pnpm db:studio` | Open Drizzle Studio to inspect the database |
