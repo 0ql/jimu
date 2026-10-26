@@ -1,4 +1,4 @@
-<img width="1920" height="1440" alt="showcase" src="https://github.com/user-attachments/assets/c2bcb683-1e29-43a2-b605-89aa468aa73a" />
+<img width="1920" height="1083" alt="showcasecropped" src="https://github.com/user-attachments/assets/2df85869-2936-48f0-a2e3-88864d8da9ad" />
 
 # Jimu
 
