@@ -1,5 +1,5 @@
 import { json } from "@sveltejs/kit";
-import { CORS, preflight, resourceUrl, SCOPES } from "#lib/server/oauth.js";
+import { connectorOrigin, CORS, preflight, resourceUrl, SCOPES } from "#lib/server/oauth.js";
 import type { RequestHandler } from "./$types";
 
 // RFC 9728 protected resource metadata: "/mcp is protected, and jimu itself issues the tokens".
@@ -8,7 +8,7 @@ export const GET: RequestHandler = ({ url }) =>
 	json(
 		{
 			resource: resourceUrl(url.origin),
-			authorization_servers: [url.origin],
+			authorization_servers: [connectorOrigin(url.origin)],
 			scopes_supported: [...SCOPES],
 			bearer_methods_supported: ["header"],
 			resource_name: "jimu",

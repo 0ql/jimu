@@ -12,6 +12,10 @@ services:
       # Behind an HTTPS reverse proxy, forward the original protocol and host instead:
       # - PROTOCOL_HEADER=x-forwarded-proto
       # - HOST_HEADER=x-forwarded-host
+      # A Claude/ChatGPT connector under its own public name (e.g. a tunnel that only lets the
+      # MCP and OAuth paths through), while the app itself is only reachable over a VPN:
+      # - CONNECTOR_URL=https://jimu-mcp.example.com   # what the connector talks to
+      # - APP_URL=https://jimu.example.com             # where you approve it in your browser
     volumes:
       - jimu-data:/app/data
     restart: unless-stopped

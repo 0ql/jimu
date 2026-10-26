@@ -32,18 +32,78 @@ export const REFRESH_TTL_MS = 60 * 24 * 60 * 60 * 1000;
 // ChatGPT at https://chatgpt.com/oauth/client.json.
 const CLIENT_HOSTS = ["claude.ai", "claude.com", "chatgpt.com"];
 
+/**
+ * CONNECTOR_URL or APP_URL as an origin, or null if unset. Anything after the host is a mistake
+ * (e.g. "https://https://jimu.example.com" reads as the host "https"), so it stops the server at
+ * startup with a message instead of breaking the sign-in later.
+ */
+const settingOrigin = (name: "CONNECTOR_URL" | "APP_URL") => {
+	const value = process.env[name]?.trim();
+	if (!value) return null;
+	const wrong = () =>
+		new Error(
+			`${name} must be just a scheme and host, like https://jimu.example.com (got "${value}")`,
+		);
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		throw wrong();
+	}
+	if (!["http:", "https:"].includes(url.protocol) || url.pathname !== "/" || url.search || url.hash)
+		throw wrong();
+	return url.origin;
+};
+
+const CONNECTOR_ORIGIN = settingOrigin("CONNECTOR_URL");
+const APP_ORIGIN = settingOrigin("APP_URL");
+
+/**
+ * Where connectors reach jimu: the MCP endpoint, OAuth discovery and the token exchange, and
+ * the issuer name. CONNECTOR_URL when that is a public name of its own (e.g. a tunnel that only
+ * lets those paths through while the app itself stays on a VPN); else the address the request
+ * came in on. Functions here take the request's origin and map it.
+ */
+export const connectorOrigin = (requestOrigin: string) => CONNECTOR_ORIGIN ?? requestOrigin;
+
+/**
+ * Where the user's browser approves a connection (the consent page, behind the jimu login):
+ * APP_URL, else the address the request came in on.
+ */
+export const appOrigin = (requestOrigin: string) => APP_ORIGIN ?? requestOrigin;
+
+/** The paths a connector uses; on the connector's own name nothing else is answered. */
+export const isConnectorPath = (path: string) =>
+	path === "/mcp" ||
+	path === "/oauth/token" ||
+	/^\/\.well-known\/oauth-(protected-resource|authorization-server)(\/.*)?$/.test(path);
+
+/**
+ * Whether a request came in on the connector's own name: CONNECTOR_URL, when APP_URL puts the
+ * app on another one. Only connector paths are answered there, so a mistake in the tunnel's
+ * rules can't expose the app or its login. With just CONNECTOR_URL set the app shares that
+ * name, so nothing is restricted.
+ */
+const CONNECTOR_ONLY_HOST =
+	CONNECTOR_ORIGIN && APP_ORIGIN && new URL(CONNECTOR_ORIGIN).host !== new URL(APP_ORIGIN).host
+		? new URL(CONNECTOR_ORIGIN).host
+		: null;
+
+// By name only, so a missing protocol header can't make the check miss.
+export const onConnectorHost = (url: URL) => url.host === CONNECTOR_ONLY_HOST;
+
 /** The MCP endpoint, which is also the resource tokens are issued for. */
-export const resourceUrl = (origin: string) => `${origin}/mcp`;
+export const resourceUrl = (origin: string) => `${connectorOrigin(origin)}/mcp`;
 /**
  * Whether a client's `resource` parameter names this MCP server. Clients send either the MCP
  * endpoint itself or just the server's origin (ChatGPT's docs show the latter); tokens are
  * always issued for the endpoint.
  */
 export const isOwnResource = (resource: string, origin: string) =>
-	[resourceUrl(origin), origin].includes(resource.replace(/\/$/, ""));
+	[resourceUrl(origin), connectorOrigin(origin)].includes(resource.replace(/\/$/, ""));
 
 export const resourceMetadataUrl = (origin: string) =>
-	`${origin}/.well-known/oauth-protected-resource/mcp`;
+	`${connectorOrigin(origin)}/.well-known/oauth-protected-resource/mcp`;
 
 export const hash = (secret: string) => createHash("sha256").update(secret).digest("hex");
 export const newSecret = () => randomBytes(32).toString("base64url");

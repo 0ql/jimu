@@ -1,4 +1,6 @@
 import { validateSession } from "#lib/server/session.js";
+// Loaded at startup on purpose: it checks CONNECTOR_URL and APP_URL and stops on a bad value.
+import { isConnectorPath, onConnectorHost } from "#lib/server/oauth.js";
 import { redirect } from "@sveltejs/kit";
 import type { Handle } from "@sveltejs/kit/hooks";
 
@@ -25,6 +27,10 @@ const isCrossSiteForm = (request: Request, url: URL) => {
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const { url, request } = event;
+
+	if (onConnectorHost(url) && !isConnectorPath(url.pathname)) {
+		return new Response("Not found", { status: 404 });
+	}
 
 	if (url.pathname !== "/oauth/token" && isCrossSiteForm(request, url)) {
 		return new Response(`Cross-site ${request.method} form submissions are forbidden`, {

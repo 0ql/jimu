@@ -4,6 +4,7 @@ import { db } from "#lib/server/db/index.js";
 import { oauthGrants, users } from "#lib/server/db/schema.js";
 import {
 	CODE_TTL_MS,
+	connectorOrigin,
 	hash,
 	isOwnResource,
 	loadClient,
@@ -24,7 +25,9 @@ const back = (
 	const target = new URL(redirectUri);
 	for (const [k, v] of Object.entries(params)) target.searchParams.set(k, v);
 	if (state) target.searchParams.set("state", state);
-	target.searchParams.set("iss", origin);
+	// The issuer, as discovery names it: the connector's address, also when this page is
+	// reached under another name (APP_URL).
+	target.searchParams.set("iss", connectorOrigin(origin));
 	// Only ever a redirect URI already matched against the client's registered ones.
 	return redirect(303, target.toString(), { external: [target.origin] });
 };
