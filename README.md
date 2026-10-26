@@ -1,4 +1,6 @@
-# jimu
+<img width="1920" height="1440" alt="showcase" src="https://github.com/user-attachments/assets/c2bcb683-1e29-43a2-b605-89aa468aa73a" />
+
+# Jimu
 
 A local-first workout log. Everything is stored in the browser (IndexedDB) and works offline; a
 small SvelteKit + SQLite server syncs it between your devices.
