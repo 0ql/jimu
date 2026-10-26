@@ -9,9 +9,10 @@ const PAGES = `pages-${version}`;
 
 // Built app files plus everything in static/. Kit 3 lists them relative to the app root
 // ("_app/immutable/..."), so resolve them to absolute paths to match request URLs.
-const ASSETS: string[] = [...immutable, ...assets].map(
-	(file) => new URL(file.path, sw.location.href).pathname,
-);
+const toPath = (file: { path: string }) => new URL(file.path, sw.location.href).pathname;
+const APP_FILES = immutable.map(toPath);
+const STATIC_FILES = assets.map(toPath);
+const ASSETS: string[] = [...APP_FILES, ...STATIC_FILES];
 
 // The tabs, fetched ahead of time so each of them opens offline even if it wasn't visited.
 const ROUTES = ["/", "/exercises", "/sessions", "/routines", "/analytics", "/settings"];
@@ -73,7 +74,13 @@ sw.addEventListener("install", (event) => {
 	event.waitUntil(
 		caches
 			.open(CACHE)
-			.then((cache) => cache.addAll(ASSETS))
+			.then(async (cache) => {
+				// The app's code has to be complete or offline use would break, so a failure there
+				// fails the install (the browser tries again later). Static files (icons, the
+				// manifest) are best effort: one that can't be fetched just isn't kept.
+				await cache.addAll(APP_FILES);
+				await Promise.allSettled(STATIC_FILES.map((path) => cache.add(path)));
+			})
 			.then(() => sw.skipWaiting()),
 	);
 });
